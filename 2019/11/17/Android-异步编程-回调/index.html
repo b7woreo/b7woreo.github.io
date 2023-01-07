@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="为什么需要异步有始必有因，在说怎么编写异步代码之前我们先要搞清楚为什么需要异步。考虑这样一个用户登陆的业务场景，当用户点击登陆后，首先需要从 SSO 服务器获取 token，然后分别登陆 IM 服务和从业务服务器拉取用户信息，这其中的每一个步骤失败都会导致登陆失败。流程图如下所示：  根据流程图，设计出如下接口： 12345678910111213141516171819public interf">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android 异步编程-回调">
+<meta property="og:url" content="https://blog.chrnie.com/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="为什么需要异步有始必有因，在说怎么编写异步代码之前我们先要搞清楚为什么需要异步。考虑这样一个用户登陆的业务场景，当用户点击登陆后，首先需要从 SSO 服务器获取 token，然后分别登陆 IM 服务和从业务服务器拉取用户信息，这其中的每一个步骤失败都会导致登陆失败。流程图如下所示：  根据流程图，设计出如下接口： 12345678910111213141516171819public interf">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.chrnie.com/images/201911171344.png">
+<meta property="article:published_time" content="2019-11-17T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.chrnie.com/images/201911171344.png">
+
+<link rel="canonical" href="https://blog.chrnie.com/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Android 异步编程-回调 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Android 异步编程-回调
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-11-17 00:00:00" itemprop="dateCreated datePublished" datetime="2019-11-17T00:00:00Z">2019-11-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="为什么需要异步"><a href="#为什么需要异步" class="headerlink" title="为什么需要异步"></a>为什么需要异步</h1><p>有始必有因，在说怎么编写异步代码之前我们先要搞清楚为什么需要异步。考虑这样一个用户登陆的业务场景，当用户点击登陆后，首先需要从 SSO 服务器获取 token，然后分别登陆 IM 服务和从业务服务器拉取用户信息，这其中的每一个步骤失败都会导致登陆失败。流程图如下所示：</p>
+<p><img src="/images/201911171344.png"></p>
+<p>根据流程图，设计出如下接口：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">login</span><span class="params">(String username, String password)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">SsoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">Token <span class="title">getToken</span><span class="params">(String username, String password)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ImService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">login</span><span class="params">(Token token)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">UserInfoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">UserInfo <span class="title">getUserInfo</span><span class="params">(Token token)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过组合上述接口实现登陆业务逻辑：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LoginServiceImpl</span> <span class="keyword">implements</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SsoService ssoService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ImService imService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> UserInfoService userInfoService;</span><br><span class="line"></span><br><span class="line">    LoginServiceImpl(SsoService ssoService, ImService imService, UserInfoService userInfoService) &#123;</span><br><span class="line">        <span class="keyword">this</span>.ssoService = ssoService;</span><br><span class="line">        <span class="keyword">this</span>.imService = imService;</span><br><span class="line">        <span class="keyword">this</span>.userInfoService = userInfoService;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">login</span><span class="params">(String username, String password)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Token token = ssoService.getToken(username, password);</span><br><span class="line">            imService.login(token);</span><br><span class="line">            UserInfo userInfo = userInfoService.getUserInfo(token);</span><br><span class="line">            saveUserInfo(token, userInfo);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">            loginExceptionHandler(t);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BusinessException();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loginExceptionHandler</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">			...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">saveUserInfo</span><span class="params">(Token token, UserInfo userInfo)</span> </span>&#123;</span><br><span class="line">			...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>可以看到，在同步的情况下要描述整个登陆流程并不困难，整个代码非常的简洁，即使是新接触该业务的同学也能通过看看代码很轻松的了解用户登陆经历了哪些步骤。</p>
+<p>但是，同步的代码设计有很大的弊端：</p>
+<ol>
+<li>不利于充分利用 CPU 资源。</li>
+<li>在 Android 平台上，其 UI 框架同其它的平台一样，需要在主线程完成更新 UI、接收用户手势回调等操作。长期占用主线程执行耗时任务会导致应用不能及时响应用户操作而降低用户体验，严重时甚至会出现 ANR。</li>
+</ol>
+<p>在接收到用户的点击事件回调后，想要调用上述代码完成登陆操作需要自行完成线程切换的操作，但是该代码最适合在什么类型的线程池中执行只有实现方才知道，无脑的切换线程会导致不必要的开销要不就是导致接口使用与实现耦合。所以，我们需要改造接口，在接口设计时就要以异步的方式来设计，将切换线程这样的操作封装到接口内部，毕竟只有实现方才能分辨逻辑是 <strong>计算密集型</strong> 的还是 <strong>IO 密集型</strong>，以更合理的方式完成执行线程的调度。 </p>
+<h1 id="基础实现异步的方式-回调"><a href="#基础实现异步的方式-回调" class="headerlink" title="基础实现异步的方式-回调"></a>基础实现异步的方式-回调</h1><p>最基础的实现异步的方式就是利用回调，我们首先设计一个通用的接口包含成功和失败的操作：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Callback</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(T result)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">onFailure</span><span class="params">(Throwable t)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着就可以开始将上文中的同步接口全部通过回调的方式改成异步的接口设计：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">loginAsync</span><span class="params">(String username, String password, Callback&lt;Void&gt; callback)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">SsoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">loginAsync</span><span class="params">(String username, String password, Callback&lt;Token&gt; callback)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ImService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">loginAsync</span><span class="params">(Token token, Callback&lt;Void&gt; callback)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">UserInfoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">getUserInfoAsync</span><span class="params">(Token token, Callback&lt;UserInfo&gt; callback)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>同样的我们需要通过组合上述异步接口来实现 LoginService，同时我们还可以做一些小优化：在获得 Token 之后，完全可以同时进行 IM 登陆和用户信息的获取操作以节省登陆耗时。实现代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LoginServiceImpl</span> <span class="keyword">implements</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SsoService ssoService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ImService imService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> UserInfoService userInfoService;</span><br><span class="line"></span><br><span class="line">    LoginServiceImpl(SsoService ssoService, ImService imService, UserInfoService userInfoService) &#123;</span><br><span class="line">        <span class="keyword">this</span>.ssoService = ssoService;</span><br><span class="line">        <span class="keyword">this</span>.imService = imService;</span><br><span class="line">        <span class="keyword">this</span>.userInfoService = userInfoService;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">loginAsync</span><span class="params">(<span class="keyword">final</span> String username, String password, <span class="keyword">final</span> Callback&lt;Void&gt; callback)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Callback&lt;Token&gt; ssoCallback = <span class="keyword">new</span> Callback&lt;Token&gt;() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(<span class="keyword">final</span> Token token)</span> </span>&#123;</span><br><span class="line">                <span class="keyword">final</span> Boolean[] status = <span class="keyword">new</span> Boolean[]&#123;<span class="keyword">false</span>, <span class="keyword">false</span>&#125;;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">final</span> Callback&lt;Void&gt; imCallback = <span class="keyword">new</span> Callback&lt;Void&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(Void ignore)</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">synchronized</span> (status) &#123;</span><br><span class="line">                            status[<span class="number">0</span>] = <span class="keyword">true</span>;</span><br><span class="line">                            <span class="keyword">if</span> (status[<span class="number">1</span>]) &#123;</span><br><span class="line">                                callback.onSuccess(<span class="keyword">null</span>);</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onFailure</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">                        handleLoginException(t, callback);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">                imService.loginAsync(token, imCallback);</span><br><span class="line"></span><br><span class="line">                <span class="keyword">final</span> Callback&lt;UserInfo&gt; userInfoCallback = <span class="keyword">new</span> Callback&lt;UserInfo&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(UserInfo userInfo)</span> </span>&#123;</span><br><span class="line">                        saveUserInfo(token, userInfo);</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">synchronized</span> (status) &#123;</span><br><span class="line">                            status[<span class="number">1</span>] = <span class="keyword">true</span>;</span><br><span class="line">                            <span class="keyword">if</span> (status[<span class="number">0</span>]) &#123;</span><br><span class="line">                                callback.onSuccess(<span class="keyword">null</span>);</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onFailure</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">                        handleLoginException(t, callback);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">                userInfoService.getUserInfoAsync(token, userInfoCallback);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onFailure</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">                handleLoginException(t, callback);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        ssoService.loginAsync(username, password, ssoCallback);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">checkLoginStatus</span><span class="params">(Boolean[] status, Callback&lt;Void&gt; callback)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (status[<span class="number">0</span>] &amp;&amp; status[<span class="number">1</span>]) &#123;</span><br><span class="line">            callback.onSuccess(<span class="keyword">null</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleLoginException</span><span class="params">(Throwable t, Callback&lt;Void&gt; callback)</span> </span>&#123;</span><br><span class="line">			...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">saveUserInfo</span><span class="params">(Token token, UserInfo userInfo)</span> </span>&#123;</span><br><span class="line">			...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过回调的方式设计的异步接口要实现于同步代码相同的逻辑，可以看到光中代码行数上就是同步代码的两倍以上，因为这其中不仅仅包含了业务逻辑还包括了异步流程控制逻辑。而且加上层层嵌套的回调，容易形成所谓的地狱回调，导致业务的逻辑被掩埋在其中，对于不熟悉业务的同学想要理清其中逻辑就没有那么简单。</p>
+<p>大多数用回调设计的异步接口中并不会对回调接口的执行线程做出一个保证，如果从回调获取数据后，对数据的处理使用必须要在指定的线程中的场景，例如通过回调得到的数据更新 UI，接口的使用方通常都需要自行在回调中完成线程的切换操作，这增加了接口的使用复杂度。</p>
+<p>为了让接口便于使用，还需要在接口函数中增加一个 Handler 或 Executor 参数，由接口实现方完成线程切换逻辑。例如在 Android 的 LocationManager 源码中这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">registerGnssStatusCallback</span> <span class="params">(GnssStatus.Callback callback, Handler handler)</span></span></span><br></pre></td></tr></table></figure>
+
+<p>除了需要考虑回调执行线程的问题，上述代码还有一个缺陷，一旦调用发起了就没有办法中断，也就是没办法对调用的生命周期进行管理。想要解决这个问题也有办法：增加一个 Cancelable 类型作为返回值，外部需要中断时调用 cancel() 方法即可：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">class</span> <span class="title">Cancelable</span></span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">cancel</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，在不借助任何第三库的情况下是可以通过回调实现异步逻辑的，但是过程十分痛苦，需要考虑过多除业务逻辑外的其它问题。所以，在有现成的专为解决异步问题设计的第三库使用时，不推荐使用这种原始的办法去编写异步代码。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/" title="Android 异步编程-回调">https://blog.chrnie.com/2019/11/17/Android-异步编程-回调/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/08/02/Kotlin-%E4%B8%AD%E5%8F%A6%E7%B1%BB%E7%9A%84%E5%8D%95%E4%BE%8B%E5%86%99%E6%B3%95/" rel="prev" title="Kotlin 中另类的单例写法">
+      <i class="fa fa-chevron-left"></i> Kotlin 中另类的单例写法
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/01/27/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-Rxjava/" rel="next" title="Android 异步编程-RxJava">
+      Android 异步编程-RxJava <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E5%BC%82%E6%AD%A5"><span class="nav-number">1.</span> <span class="nav-text">为什么需要异步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E7%9A%84%E6%96%B9%E5%BC%8F-%E5%9B%9E%E8%B0%83"><span class="nav-number">2.</span> <span class="nav-text">基础实现异步的方式-回调</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : 'aba6bf975561951baeaa0112e3003859',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

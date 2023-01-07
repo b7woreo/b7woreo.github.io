@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="DataBindingDataBinding 是 Google 推出的用于完成 Java 层数据到 xml 中的绑定工具，便于完成 MVVM 架构。Data Binding Library官方给出的向导很详细的讲述了 DataBinding 如何使用的，但是却没有提到如何自定义双向绑定属性，本文接下来将通过自定义一个View，使其能支持双向绑定的 display 属性来讲解自定义双向绑定属性的过程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="自定义 DataBinding 双向绑定属性">
+<meta property="og:url" content="https://blog.chrnie.com/2016/12/02/%E8%87%AA%E5%AE%9A%E4%B9%89-DataBinding-%E5%8F%8C%E5%90%91%E7%BB%91%E5%AE%9A%E5%B1%9E%E6%80%A7/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="DataBindingDataBinding 是 Google 推出的用于完成 Java 层数据到 xml 中的绑定工具，便于完成 MVVM 架构。Data Binding Library官方给出的向导很详细的讲述了 DataBinding 如何使用的，但是却没有提到如何自定义双向绑定属性，本文接下来将通过自定义一个View，使其能支持双向绑定的 display 属性来讲解自定义双向绑定属性的过程">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2016-12-02T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2016/12/02/%E8%87%AA%E5%AE%9A%E4%B9%89-DataBinding-%E5%8F%8C%E5%90%91%E7%BB%91%E5%AE%9A%E5%B1%9E%E6%80%A7/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>自定义 DataBinding 双向绑定属性 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2016/12/02/%E8%87%AA%E5%AE%9A%E4%B9%89-DataBinding-%E5%8F%8C%E5%90%91%E7%BB%91%E5%AE%9A%E5%B1%9E%E6%80%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          自定义 DataBinding 双向绑定属性
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2016-12-02 00:00:00" itemprop="dateCreated datePublished" datetime="2016-12-02T00:00:00Z">2016-12-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="DataBinding"><a href="#DataBinding" class="headerlink" title="DataBinding"></a>DataBinding</h1><p>DataBinding 是 Google 推出的用于完成 Java 层数据到 xml 中的绑定工具，便于完成 MVVM 架构。<br><a target="_blank" rel="noopener" href="https://developer.android.com/topic/libraries/data-binding/index.html#layout_details">Data Binding Library</a>官方给出的向导很详细的讲述了 DataBinding 如何使用的，但是却没有提到如何自定义双向绑定属性，本文接下来将通过自定义一个View，使其能支持双向绑定的 <em>display</em> 属性来讲解自定义双向绑定属性的过程。</p>
+<h1 id="关键点"><a href="#关键点" class="headerlink" title="关键点"></a>关键点</h1><ol start="0">
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/reference/android/databinding/InverseBindingAdapter.html">InverseBindingAdapter</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/reference/android/databinding/InverseBindingAdapter.html">InverseBindingMethod</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/reference/android/databinding/InverseBindingMethods.html">InverseBindingMethods</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.android.com/reference/android/databinding/InverseBindingListener.html">InverseBindingListener</a></li>
+</ol>
+<h1 id="第零步"><a href="#第零步" class="headerlink" title="第零步"></a>第零步</h1><p>在写代码之前，先分析完成一个支持双向绑定的属性需要什么。<br>0. 需要属性的 getter 和 setter 方法。<br>0. 需要属性发生变化时触发回调。</p>
+<h1 id="第一步"><a href="#第一步" class="headerlink" title="第一步"></a>第一步</h1><p>由于 View 默认没有办法设置 VisibilityChange 监听，所以需要简单的对 View 进行一些改造：<br>重写 <code>View#onVisibilityChanged</code> 方法并提供一个 <code>setVisibilityChangeListener</code> 方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> OnVisibilityChangeListener mListener;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onVisibilityChanged</span><span class="params">(View changedView, <span class="keyword">int</span> visibility)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>.onVisibilityChanged(changedView, visibility);</span><br><span class="line">    <span class="keyword">if</span> (mListener != <span class="keyword">null</span>) &#123;</span><br><span class="line">        mListener.onChange();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setVisibilityChangeListener</span><span class="params">(OnVisibilityChangeListener listener)</span> </span>&#123;</span><br><span class="line">    mListener = listener;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OnVisibilityChangeListener</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">onChange</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="第二步"><a href="#第二步" class="headerlink" title="第二步"></a>第二步</h1><p>使用 <code>BindingAdapter</code> 注解设置 display 属性的 setter 函数，注解参数 value 是在 xml 中对应的属性名，方法的第一个参数是需要设置属性的 view，第二个参数是需要设置的属性值。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindingAdapter(value = &quot;display&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">setDisplay</span><span class="params">(CustomView view, <span class="keyword">boolean</span> isDisplay)</span> </span>&#123;</span><br><span class="line">    view.setVisibility(isDisplay ? View.VISIBLE : View.INVISIBLE);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="第三步"><a href="#第三步" class="headerlink" title="第三步"></a>第三步</h1><p>用 <code>InverseBindingAdapter</code> 定义 getter 函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@InverseBindingAdapter(attribute = &quot;display&quot;, event = &quot;displayAttrChanged&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isDisplay</span><span class="params">(CustomView view)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> view.getVisibility() == View.VISIBLE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>attribute</code> 是xml中的属性名，<code>event</code> 是设置属性监听的属性名，类型是 InverseBindingListener。</p>
+<h1 id="第四步"><a href="#第四步" class="headerlink" title="第四步"></a>第四步</h1><p>使用 <code>BindingAdapter</code> 注解设置与第三步中 event 值相同的回调函数的 setter 函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@BindingAdapter(value = &quot;displayAttrChanged&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">setChangeListener</span><span class="params">(CustomView view, InverseBindingListener listener)</span> </span>&#123;</span><br><span class="line">    view.setVisibilityChangeListener(listener::onChange);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="第五步"><a href="#第五步" class="headerlink" title="第五步"></a>第五步</h1><p>在xml中使用 <code>@=&#123;&#125;</code> 语法。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;CustomView</span><br><span class="line">    android:layout_width=&quot;match_parent&quot;</span><br><span class="line">    android:layout_height=&quot;match_parent&quot;</span><br><span class="line">    app:display=&quot;@=&#123;isDisplay&#125;&quot; /&gt;</span><br></pre></td></tr></table></figure>
+<p>于是就可以使用 isDisplay 控制 view 的显示和隐藏，并且当 view 可见状态改变时 isDisplay 值也会随之改变。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2016/12/02/%E8%87%AA%E5%AE%9A%E4%B9%89-DataBinding-%E5%8F%8C%E5%90%91%E7%BB%91%E5%AE%9A%E5%B1%9E%E6%80%A7/" title="自定义 DataBinding 双向绑定属性">https://blog.chrnie.com/2016/12/02/自定义-DataBinding-双向绑定属性/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/06/23/Manjaro-%E5%AE%89%E8%A3%85%E8%AE%B0/" rel="prev" title="Manjaro 安装记">
+      <i class="fa fa-chevron-left"></i> Manjaro 安装记
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/02/23/Transition-Animation-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="next" title="Transition Animation 学习笔记">
+      Transition Animation 学习笔记 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#DataBinding"><span class="nav-number">1.</span> <span class="nav-text">DataBinding</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">关键点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E9%9B%B6%E6%AD%A5"><span class="nav-number">3.</span> <span class="nav-text">第零步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5"><span class="nav-number">4.</span> <span class="nav-text">第一步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5"><span class="nav-number">5.</span> <span class="nav-text">第二步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%B8%89%E6%AD%A5"><span class="nav-number">6.</span> <span class="nav-text">第三步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E5%9B%9B%E6%AD%A5"><span class="nav-number">7.</span> <span class="nav-text">第四步</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%BA%94%E6%AD%A5"><span class="nav-number">8.</span> <span class="nav-text">第五步</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : 'e392560a0dab8e5a8902c7e35149dd1b',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="本文记录一些关于使用 FragmentPagerAdapter 时的方法总结，帮助我们优化 ViewPager 的性能。 数据刷新在默认情况下，调用 PagerAdapter#notifyDataSetChanged() 并不会刷新已经存在的页面排序。需要我们重写 PagerAdapter#getItemPosition() 方法。该方法返回刷新后已经存在 fragment 的新位置。并且已经预定">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FragmentPagerAdapter 使用指南">
+<meta property="og:url" content="https://blog.chrnie.com/2017/09/16/FragmentPagerAdapter-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="本文记录一些关于使用 FragmentPagerAdapter 时的方法总结，帮助我们优化 ViewPager 的性能。 数据刷新在默认情况下，调用 PagerAdapter#notifyDataSetChanged() 并不会刷新已经存在的页面排序。需要我们重写 PagerAdapter#getItemPosition() 方法。该方法返回刷新后已经存在 fragment 的新位置。并且已经预定">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2017-09-16T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2017/09/16/FragmentPagerAdapter-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>FragmentPagerAdapter 使用指南 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2017/09/16/FragmentPagerAdapter-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FragmentPagerAdapter 使用指南
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-09-16 00:00:00" itemprop="dateCreated datePublished" datetime="2017-09-16T00:00:00Z">2017-09-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>本文记录一些关于使用 FragmentPagerAdapter 时的方法总结，帮助我们优化 ViewPager 的性能。</p>
+<h1 id="数据刷新"><a href="#数据刷新" class="headerlink" title="数据刷新"></a>数据刷新</h1><p>在默认情况下，调用 PagerAdapter#notifyDataSetChanged() 并不会刷新已经存在的页面排序。需要我们重写 PagerAdapter#getItemPosition() 方法。该方法返回刷新后已经存在 fragment 的新位置。并且已经预定义好了两个常量  POSITION_NONE 和 POSITION_UNCHANGED，分别表示原先存在的 fragment 现在已经不在列表中了和原先存在的 fragment 刷新后位置没有发生改变。示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getItemPosition</span><span class="params">(Object object)</span> </span>&#123;</span><br><span class="line">  Fragment f = (Fragment) object;</span><br><span class="line">  <span class="keyword">long</span> id = f.getArguments().getLong(<span class="string">&quot;id&quot;</span>);</span><br><span class="line">  <span class="keyword">int</span> index = indexOfId(id);</span><br><span class="line">  <span class="keyword">return</span> index == -<span class="number">1</span> ? POSITION_NONE : index;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里传入的 object 参数是 PagerAdaper#instantiateItem() 方法的返回值，在 FragmentPagerAdapter 中实际上是我们在 FragmentPagerAdapter#getItem() 中返回的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Object <span class="title">instantiateItem</span><span class="params">(ViewGroup container, <span class="keyword">int</span> position)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (mCurTransaction == <span class="keyword">null</span>) &#123;</span><br><span class="line">        mCurTransaction = mFragmentManager.beginTransaction();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">long</span> itemId = getItemId(position);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Do we already have this fragment?</span></span><br><span class="line">    String name = makeFragmentName(container.getId(), itemId);</span><br><span class="line">    Fragment fragment = mFragmentManager.findFragmentByTag(name);</span><br><span class="line">    <span class="keyword">if</span> (fragment != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (DEBUG) Log.v(TAG, <span class="string">&quot;Attaching item #&quot;</span> + itemId + <span class="string">&quot;: f=&quot;</span> + fragment);</span><br><span class="line">        mCurTransaction.attach(fragment);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        fragment = getItem(position);</span><br><span class="line">        <span class="keyword">if</span> (DEBUG) Log.v(TAG, <span class="string">&quot;Adding item #&quot;</span> + itemId + <span class="string">&quot;: f=&quot;</span> + fragment);</span><br><span class="line">        mCurTransaction.add(container.getId(), fragment,</span><br><span class="line">                makeFragmentName(container.getId(), itemId));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (fragment != mCurrentPrimaryItem) &#123;</span><br><span class="line">        fragment.setMenuVisibility(<span class="keyword">false</span>);</span><br><span class="line">        fragment.setUserVisibleHint(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> fragment;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>因为一般情况下，我们会把数据通过 Fragment#setArguments() 传递给 fragment 实例，所以就先从实例对象中获取到 fragment 的相关信息，然后确定 fragment 在新列表中的位置返回即可。这样，在我们调用 PagerAdapter#notifyDataSetChange() 之后，就会根据这个值调整已有的 fragment 的顺序并且创建新的还不存在的 fragment。假如该方法直接返回 POSITION_NONE，那么将会导致所有的 fragment 重建，在 fragment 创建开销比较大时，就会造成性能上的瓶颈。<br>如上重写了 getItemPosition() 了之后会发现当页面多了之后就出现了 bug。这是因为在 PagerAdapter 中默认使用 position 来唯一标识 fragment，在页面多之后就需要重建和销毁 fragment，而怎么找到需要销毁和重建的 fragment 呢，就是通过 position。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="keyword">long</span> itemId = getItemId(position);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Do we already have this fragment?</span></span><br><span class="line">String name = makeFragmentName(container.getId(), itemId);</span><br></pre></td></tr></table></figure>
+<p>我们还需要重写 FragmentPagerAdapter#getItemId() 方法。示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">getItemId</span><span class="params">(<span class="keyword">int</span> position)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> dataList.get(position).getId();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>建议在 fragment 之间传值直接传递 id，而不要传递整个数据的序列化对象。还有一个需要注意的地方，千万不要持有 fragment 的引用 List。例如这样实现 FragmentPagerAdapter#getItem() 函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Fragment <span class="title">getItem</span><span class="params">(<span class="keyword">int</span> position)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> fragmentList.get(position);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>因为 FragmentManager 会帮助我们管理 fragment，在 activity 被系统销毁重建后，在 PagerAdapter 中的 fragment 将和我们持有的 fragment 不是同一个引用了。正确的获取 fragment 实例的方法是通过 tag。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">makeFragmentName</span><span class="params">(<span class="keyword">int</span> viewId, <span class="keyword">long</span> id)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;android:switcher:&quot;</span> + viewId + <span class="string">&quot;:&quot;</span> + id;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面的方法是 FragmentPagerAdapter 为每个 fragment 创建对应 tag 的方法，访问权限是 private 的，所以我们只能假设在未来该方法的实现也不会改变，然后我们就拷贝该方法实现到我们需要的地方，然后通过     FragmentManager#findFragmentByTag() 方法获取到实例。</p>
+<h1 id="懒加载"><a href="#懒加载" class="headerlink" title="懒加载"></a>懒加载</h1><p>当 fragment 创建的 view 十分复杂，需要较长的渲染时间时且有多个这样的页面存在于 ViewPager 中时，就需要让 fragment 不在同一时间加载出来，只有需要显示到用户面前时，才开始渲染页面。在使用 FragmentPagerAdapter 时如何实现这样的功能呢？首先，我们需要知道，在什么时候页面会展示到用户的视线中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setPrimaryItem</span><span class="params">(ViewGroup container, <span class="keyword">int</span> position, Object object)</span> </span>&#123;</span><br><span class="line">    Fragment fragment = (Fragment)object;</span><br><span class="line">    <span class="keyword">if</span> (fragment != mCurrentPrimaryItem) &#123;</span><br><span class="line">        <span class="keyword">if</span> (mCurrentPrimaryItem != <span class="keyword">null</span>) &#123;</span><br><span class="line">            mCurrentPrimaryItem.setMenuVisibility(<span class="keyword">false</span>);</span><br><span class="line">            mCurrentPrimaryItem.setUserVisibleHint(<span class="keyword">false</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (fragment != <span class="keyword">null</span>) &#123;</span><br><span class="line">            fragment.setMenuVisibility(<span class="keyword">true</span>);</span><br><span class="line">            fragment.setUserVisibleHint(<span class="keyword">true</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        mCurrentPrimaryItem = fragment;</span><br><span class="line">    &#125;</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+<p>在 setPrimaryItem 方法中我们会发现，当 fragment 显示在用户面前时，会调用 fragment#setUserVisibleHint 方法，表明这个 fragment 对用户时可见的。开始页面渲染的条件：数据已经准备好 &amp;&amp; 第一次进入用户视野。如果对 RxJava 很熟悉的话，要表达这样的逻辑简直就不要太简单。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SampleFragment</span> <span class="keyword">extends</span> <span class="title">Fragment</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> ConnectableFlowable&lt;Date&gt; dataSource;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">SampleFragment</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    dataSource = getFlowableDate.publish();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onViewCreated</span><span class="params">(View view, <span class="meta">@Nullable</span> Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>.onViewCreated(view, savedInstanceState);</span><br><span class="line">    dataSource.subscribe(<span class="comment">/*render*/</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserVisibleHint</span><span class="params">(<span class="keyword">boolean</span> isVisibleToUser)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>.setUserVisibleHint(isVisibleToUser);</span><br><span class="line">    <span class="keyword">if</span>(isVisibleToUser)&#123;</span><br><span class="line">      dataSource.connect();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>只需要调用 publish() 把一个 Flowable 变成 ConnectableFlowable，然后在 setUserVisibleHint() 中判断 isVisibleToUser 值为真时就调用 ConnectableFlowable#connect 方法就好了。需要注意的是，setUserVisibleHint 可能会比 fragment 的生命周期都先被调用，所以建议在 fragment 的构造方法中就完成 ConnectableFlowable 的创建工作。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2017/09/16/FragmentPagerAdapter-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/" title="FragmentPagerAdapter 使用指南">https://blog.chrnie.com/2017/09/16/FragmentPagerAdapter-使用指南/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/02/23/Transition-Animation-%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="prev" title="Transition Animation 学习笔记">
+      <i class="fa fa-chevron-left"></i> Transition Animation 学习笔记
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/" rel="next" title="使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting">
+      使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%88%B7%E6%96%B0"><span class="nav-number">1.</span> <span class="nav-text">数据刷新</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%87%92%E5%8A%A0%E8%BD%BD"><span class="nav-number">2.</span> <span class="nav-text">懒加载</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '3c2940c56d6971e29cb5cdf328f5e515',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

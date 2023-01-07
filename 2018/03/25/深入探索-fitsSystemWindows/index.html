@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="相信大家对 fitsSystemWindows 一定不陌生，在使用 Google 提供的 design support 库中的 CoordinatorLayout 布局时经常用到，但是又具体说不清这个东西到底有什么用！本文现在就来一探究竟，fitsSystemWindows 到底是干什么的。 fitsSystemWindows 默认实现在探究 fitsSystemWindows 之前，我们首先需要">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入探索 fitsSystemWindows">
+<meta property="og:url" content="https://blog.chrnie.com/2018/03/25/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2-fitsSystemWindows/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="相信大家对 fitsSystemWindows 一定不陌生，在使用 Google 提供的 design support 库中的 CoordinatorLayout 布局时经常用到，但是又具体说不清这个东西到底有什么用！本文现在就来一探究竟，fitsSystemWindows 到底是干什么的。 fitsSystemWindows 默认实现在探究 fitsSystemWindows 之前，我们首先需要">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180325224033.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180325223906.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326002906.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326115217.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326115234.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326115249.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326143044.jpg">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180326143032.jpg">
+<meta property="article:published_time" content="2018-03-25T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.chrnie.com/images/20180325224033.jpg">
+
+<link rel="canonical" href="https://blog.chrnie.com/2018/03/25/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2-fitsSystemWindows/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>深入探索 fitsSystemWindows | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2018/03/25/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2-fitsSystemWindows/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          深入探索 fitsSystemWindows
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-03-25 00:00:00" itemprop="dateCreated datePublished" datetime="2018-03-25T00:00:00Z">2018-03-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>相信大家对 <code>fitsSystemWindows</code> 一定不陌生，在使用 Google 提供的 design support 库中的 CoordinatorLayout 布局时经常用到，但是又具体说不清这个东西到底有什么用！本文现在就来一探究竟，<code>fitsSystemWindows</code> 到底是干什么的。</p>
+<h1 id="fitsSystemWindows-默认实现"><a href="#fitsSystemWindows-默认实现" class="headerlink" title="fitsSystemWindows 默认实现"></a>fitsSystemWindows 默认实现</h1><p>在探究 fitsSystemWindows 之前，我们首先需要了解 window insets。简单来说，就是你期望你的 window 能占满整个屏幕并绘制画面，但是呢系统要显示状态栏，于是状态栏这个时候就会绘制在你的应用画面之上，为了不让你应用中的重要信息被状态栏遮挡，这个时候就需要 View 本身根据系统占用的绘制空间做一些处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// View 的 dispatchApplyWindowInsets 实现</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> WindowInsets <span class="title">dispatchApplyWindowInsets</span><span class="params">(WindowInsets insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        mPrivateFlags3 |= PFLAG3_APPLYING_INSETS;</span><br><span class="line">        <span class="keyword">if</span> (mListenerInfo != <span class="keyword">null</span> &amp;&amp; mListenerInfo.mOnApplyWindowInsetsListener != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> mListenerInfo.mOnApplyWindowInsetsListener.onApplyWindowInsets(<span class="keyword">this</span>, insets);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> onApplyWindowInsets(insets);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        mPrivateFlags3 &amp;= ~PFLAG3_APPLYING_INSETS;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ViewGroup 的 dispatchApplyWindowInsets 实现</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> WindowInsets <span class="title">dispatchApplyWindowInsets</span><span class="params">(WindowInsets insets)</span> </span>&#123;</span><br><span class="line">    insets = <span class="keyword">super</span>.dispatchApplyWindowInsets(insets);</span><br><span class="line">    <span class="keyword">if</span> (!insets.isConsumed()) &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> count = getChildCount();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">            insets = getChildAt(i).dispatchApplyWindowInsets(insets);</span><br><span class="line">            <span class="keyword">if</span> (insets.isConsumed()) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> insets;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在系统占用了部分空间时，会通过 <code>WindowInsets</code> 告知应用，并且类似 Touch Event 的传递过程一般，会遍历 View 树寻找能处理该事件的 View，当 WindowInsets 被消耗后就不再向下传递。有两个办法可以自定义 WindowInsets 的处理流程，一个是通过设置 <code>OnApplyWindowInsetsListener</code>，还有一个是重写 <code>onApplyWindowInsets</code> 方法，其中设置 Listener 的处理优先级最高。View 默认提供了 <code>onApplyWindowInsets</code> 的实现，如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> WindowInsets <span class="title">onApplyWindowInsets</span><span class="params">(WindowInsets insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> ((mPrivateFlags3 &amp; PFLAG3_FITTING_SYSTEM_WINDOWS) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// We weren&#x27;t called from within a direct call to fitSystemWindows,</span></span><br><span class="line">        <span class="comment">// call into it as a fallback in case we&#x27;re in a class that overrides it</span></span><br><span class="line">        <span class="comment">// and has logic to perform.</span></span><br><span class="line">        <span class="keyword">if</span> (fitSystemWindows(insets.getSystemWindowInsets())) &#123;</span><br><span class="line">            <span class="keyword">return</span> insets.consumeSystemWindowInsets();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// We were called from within a direct call to fitSystemWindows.</span></span><br><span class="line">        <span class="keyword">if</span> (fitSystemWindowsInt(insets.getSystemWindowInsets())) &#123;</span><br><span class="line">            <span class="keyword">return</span> insets.consumeSystemWindowInsets();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> insets;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到根据标志，分别使用了不同的实现，但是其实 <code>fitSystemWindows</code> 的实现还是将请求转发给了 <code>fitSystemWindowsInt</code>:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// fitSystemWindows 重新添加了 PFLAG3_FITTING_SYSTEM_WINDOWS 后重新调用 dispatchApplyWindowInsets，最终将请求在 onApplyWindowInsets 中转发给了 fitSystemWindowsInt</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">fitSystemWindows</span><span class="params">(Rect insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> ((mPrivateFlags3 &amp; PFLAG3_APPLYING_INSETS) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (insets == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// Null insets by definition have already been consumed.</span></span><br><span class="line">            <span class="comment">// This call cannot apply insets since there are none to apply,</span></span><br><span class="line">            <span class="comment">// so return false.</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// If we&#x27;re not in the process of dispatching the newer apply insets call,</span></span><br><span class="line">        <span class="comment">// that means we&#x27;re not in the compatibility path. Dispatch into the newer</span></span><br><span class="line">        <span class="comment">// apply insets path and take things from there.</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            mPrivateFlags3 |= PFLAG3_FITTING_SYSTEM_WINDOWS;</span><br><span class="line">            <span class="keyword">return</span> dispatchApplyWindowInsets(<span class="keyword">new</span> WindowInsets(insets)).isConsumed();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            mPrivateFlags3 &amp;= ~PFLAG3_FITTING_SYSTEM_WINDOWS;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// We&#x27;re being called from the newer apply insets path.</span></span><br><span class="line">        <span class="comment">// Perform the standard fallback behavior.</span></span><br><span class="line">        <span class="keyword">return</span> fitSystemWindowsInt(insets);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>onApplyWindowInsets</code> 所以核心实现是通过 <code>fitSystemWindowsInt</code> 进行处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">fitSystemWindowsInt</span><span class="params">(Rect insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> ((mViewFlags &amp; FITS_SYSTEM_WINDOWS) == FITS_SYSTEM_WINDOWS) &#123;</span><br><span class="line">        mUserPaddingStart = UNDEFINED_PADDING;</span><br><span class="line">        mUserPaddingEnd = UNDEFINED_PADDING;</span><br><span class="line">        Rect localInsets = sThreadLocal.get();</span><br><span class="line">        <span class="keyword">if</span> (localInsets == <span class="keyword">null</span>) &#123;</span><br><span class="line">            localInsets = <span class="keyword">new</span> Rect();</span><br><span class="line">            sThreadLocal.set(localInsets);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">boolean</span> res = computeFitSystemWindows(insets, localInsets);</span><br><span class="line">        mUserPaddingLeftInitial = localInsets.left;</span><br><span class="line">        mUserPaddingRightInitial = localInsets.right;</span><br><span class="line">        internalSetPadding(localInsets.left, localInsets.top,</span><br><span class="line">                localInsets.right, localInsets.bottom);</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>fitSystemWindowsInt</code> 处理的方式很简单，就是判断本文的主角 <code>fitsSystemWindows</code> 是否设置为 <code>ture</code>，是的话就会在给 View 添加一个和 WindowInsets 值相同的 padding，并且返回值为 true，这样在 <code>onApplyWindowInsets</code> 就会将 WindowInsets 消耗掉。效果如下：</p>
+<p><img src="/images/20180325224033.jpg"></p>
+<p><img src="/images/20180325223906.jpg"></p>
+<p>也就是说，默认情况下第一个设置 fitsSystemWindows 为 true 的 View 会在内部添加一个 padding 并将 WindowInsets 消耗，其它的 View 设置的 fitsSystemWindows 标记将会被忽略。</p>
+<h1 id="获取系统栏高度参数"><a href="#获取系统栏高度参数" class="headerlink" title="获取系统栏高度参数"></a>获取系统栏高度参数</h1><p>在这里顺便提一下，有时候可能会需要获取系统状态栏的高度，在 Google 上一搜索，很多都是答案都是通过硬编码实现：在 xx 版本下是 xx-dp，在  xx 版本下是 xx-dp。通过浏览上面的 View 源代码，可以发现一个最通用的实现办法，即通过给根 View 设置 <code>OnApplyWindowInsetsListener</code> 实现：</p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> rootView = findViewById(android.R.id.content)</span><br><span class="line">rootView.setOnApplyWindowInsetsListener &#123; v, insets -&gt;</span><br><span class="line">    <span class="comment">// 通过 insets 获取系统界面的高度值等</span></span><br><span class="line">    v.onApplyWindowInsets(insets)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="CoordinateLayout-的-fitsSystemWindows-实现"><a href="#CoordinateLayout-的-fitsSystemWindows-实现" class="headerlink" title="CoordinateLayout 的 fitsSystemWindows 实现"></a>CoordinateLayout 的 fitsSystemWindows 实现</h1><p>看了上文，可能会觉得不对呀，在使用 CoordinateLayout 时就算给子 View 设置 fitsSystemWindows 也会有效果的，而且必须父 View 也必须设置 fitsSystemWindows 为 true 才行。是的，这是因为 CoordinateLayout 内部修改了对 WindowInsets 的处理。<br>在 CoordinateLayout 的 fitsSystemWindows 值为 false 时的实现和上文是一致的，便不再多述。现在主要探究在 fitsSystemWindows 为 true 时行为是如何发生改变的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setupForInsets</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (Build.VERSION.SDK_INT &lt; <span class="number">21</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (ViewCompat.getFitsSystemWindows(<span class="keyword">this</span>)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (mApplyWindowInsetsListener == <span class="keyword">null</span>) &#123;</span><br><span class="line">            mApplyWindowInsetsListener =</span><br><span class="line">                    <span class="keyword">new</span> android.support.v4.view.OnApplyWindowInsetsListener() &#123;</span><br><span class="line">                        <span class="meta">@Override</span></span><br><span class="line">                        <span class="function"><span class="keyword">public</span> WindowInsetsCompat <span class="title">onApplyWindowInsets</span><span class="params">(View v,</span></span></span><br><span class="line"><span class="function"><span class="params">                                WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">                            <span class="keyword">return</span> setWindowInsets(insets);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// First apply the insets listener</span></span><br><span class="line">        ViewCompat.setOnApplyWindowInsetsListener(<span class="keyword">this</span>, mApplyWindowInsetsListener);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Now set the sys ui flags to enable us to lay out in the window insets</span></span><br><span class="line">        setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE</span><br><span class="line">                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        ViewCompat.setOnApplyWindowInsetsListener(<span class="keyword">this</span>, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>setupForInsets</code> 函数便是一切改变的开始，在 CoordinateLayout 的构造函数和调用 <code>setFitsSystemWindows</code> 时都会触发。可以看到 CoordinateLayout 在 API 大于 21 且 fitsSystemWindows 值为 true 时会通过给自身设置一个 OnApplyWindowInsetsListener 来改变行为，而没有选择通过重写 <code>onApplyWindowInsets</code> 方法实现。<br>接下来浏览 <code>setWindowInsets</code> 函数源码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">final</span> WindowInsetsCompat <span class="title">setWindowInsets</span><span class="params">(WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!objectEquals(mLastInsets, insets)) &#123;</span><br><span class="line">        mLastInsets = insets;</span><br><span class="line">        mDrawStatusBarBackground = insets != <span class="keyword">null</span> &amp;&amp; insets.getSystemWindowInsetTop() &gt; <span class="number">0</span>;</span><br><span class="line">        setWillNotDraw(!mDrawStatusBarBackground &amp;&amp; getBackground() == <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Now dispatch to the Behaviors</span></span><br><span class="line">        insets = dispatchApplyWindowInsetsToBehaviors(insets);</span><br><span class="line">        requestLayout();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> insets;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先判断了 insets 和之前设置的值是否一致，在不一致时才会触发更改，是一种优化手段。<code>setWillNotDraw</code> 同理也是优化手段，不是本文的重点。在这个函数当中需要关注的有：变量 <code>mDrawStatusBarBackground</code> 和函数 <code>dispatchApplyWindowInsetsToBehaviors</code>。<code>mDrawStatusBarBackground</code> 变量决定了是否需要绘制系统状态栏的背景，这个下文会再详细说明，这里先看 <code>dispatchApplyWindowInsetsToBehaviors</code> 函数:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> WindowInsetsCompat <span class="title">dispatchApplyWindowInsetsToBehaviors</span><span class="params">(WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (insets.isConsumed()) &#123;</span><br><span class="line">        <span class="keyword">return</span> insets;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>, z = getChildCount(); i &lt; z; i++) &#123;</span><br><span class="line">        <span class="keyword">final</span> View child = getChildAt(i);</span><br><span class="line">        <span class="keyword">if</span> (ViewCompat.getFitsSystemWindows(child)) &#123;</span><br><span class="line">            <span class="keyword">final</span> LayoutParams lp = (LayoutParams) child.getLayoutParams();</span><br><span class="line">            <span class="keyword">final</span> Behavior b = lp.getBehavior();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (b != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="comment">// If the view has a behavior, let it try first</span></span><br><span class="line">                insets = b.onApplyWindowInsets(<span class="keyword">this</span>, child, insets);</span><br><span class="line">                <span class="keyword">if</span> (insets.isConsumed()) &#123;</span><br><span class="line">                    <span class="comment">// If it consumed the insets, break</span></span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> insets;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数的核心就是遍历子 View，寻找 fitsSystemWindows 值为 true 且设置了 Behavior 的子 View 将 WindowInsets 消耗掉。看起来平淡无奇，但实际上暗藏玄机。只看上面的代码，会认为假如 CoordinateLayout 的 fitsSystemWindows 值为 true，子View 的 fitsSystemWindows 值为 false 的话效果与 FrameLayout 的 fitsSystemWindows 值为 false，子View 的 fitsSystemWindows 值也为 false 一致。因为如果 CoordinateLayout 子View 的 Behavior 没有设置的话，是不能消耗 WindowInsets 的，那么传递到 CoordinateLayout 的 WindowInsets 相当于没有任何的作为。但是实际效果确是下面这样的：</p>
+<p><img src="/images/20180326002906.jpg"></p>
+<p>TextView 并没有绘制在系统状态栏背景中，而是自动绘制到了系统状态栏的下方，这是为什么呢！<br>其实，这是因为 CoordinateLayout 绘制了系统状态栏的背景，于是改变了一些行为，就是与上文中的变量 <code>mDrawStatusBarBackground</code> 有关。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onDraw</span><span class="params">(Canvas c)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>.onDraw(c);</span><br><span class="line">    <span class="keyword">if</span> (mDrawStatusBarBackground &amp;&amp; mStatusBarBackground != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> inset = mLastInsets != <span class="keyword">null</span> ? mLastInsets.getSystemWindowInsetTop() : <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (inset &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            mStatusBarBackground.setBounds(<span class="number">0</span>, <span class="number">0</span>, getWidth(), inset);</span><br><span class="line">            mStatusBarBackground.draw(c);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 onDraw 函数中，在 <code>mDrawStatusBarBackground</code> 为 true 并且 <code>mStatusBarBackground</code> 不等于 null 的情况下绘制了背景。但是按照 View 的绘制流程，子 View 的绘制是要在 onDraw 之后进行的，那么子 View 就会覆盖掉 CoordinateLayout 的成果，但是从上面的效果中看到，并不是这样的。那么，这意味着子 View 的位置发生了改变。能让子 View 位置发生改变，就很有可能是在 measure 和 layout 阶段做了手脚。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec, <span class="keyword">int</span> heightMeasureSpec)</span> </span>&#123;</span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">        <span class="keyword">int</span> childWidthMeasureSpec = widthMeasureSpec;</span><br><span class="line">        <span class="keyword">int</span> childHeightMeasureSpec = heightMeasureSpec;</span><br><span class="line">        <span class="keyword">if</span> (applyInsets &amp;&amp; !ViewCompat.getFitsSystemWindows(child)) &#123;</span><br><span class="line">            <span class="comment">// We&#x27;re set to handle insets but this child isn&#x27;t, so we will measure the</span></span><br><span class="line">            <span class="comment">// child as if there are no insets</span></span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> horizInsets = mLastInsets.getSystemWindowInsetLeft()</span><br><span class="line">                    + mLastInsets.getSystemWindowInsetRight();</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> vertInsets = mLastInsets.getSystemWindowInsetTop()</span><br><span class="line">                    + mLastInsets.getSystemWindowInsetBottom();</span><br><span class="line"></span><br><span class="line">            childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(</span><br><span class="line">                    widthSize - horizInsets, widthMode);</span><br><span class="line">            childHeightMeasureSpec = MeasureSpec.makeMeasureSpec(</span><br><span class="line">                    heightSize - vertInsets, heightMode);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 <code>onMeasure</code> 中，假如子 View fitsSystemWindows 值为 false 的话，会修改父 View 的区域。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onLayout</span><span class="params">(<span class="keyword">boolean</span> changed, <span class="keyword">int</span> l, <span class="keyword">int</span> t, <span class="keyword">int</span> r, <span class="keyword">int</span> b)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> layoutDirection = ViewCompat.getLayoutDirection(<span class="keyword">this</span>);</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> childCount = mDependencySortedChildren.size();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; childCount; i++) &#123;</span><br><span class="line">        <span class="keyword">final</span> View child = mDependencySortedChildren.get(i);</span><br><span class="line">        <span class="keyword">if</span> (child.getVisibility() == GONE) &#123;</span><br><span class="line">            <span class="comment">// If the child is GONE, skip...</span></span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> LayoutParams lp = (LayoutParams) child.getLayoutParams();</span><br><span class="line">        <span class="keyword">final</span> Behavior behavior = lp.getBehavior();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (behavior == <span class="keyword">null</span> || !behavior.onLayoutChild(<span class="keyword">this</span>, child, layoutDirection)) &#123;</span><br><span class="line">            onLayoutChild(child, layoutDirection);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onLayoutChild</span><span class="params">(View child, <span class="keyword">int</span> layoutDirection)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> LayoutParams lp = (LayoutParams) child.getLayoutParams();</span><br><span class="line">    <span class="keyword">if</span> (lp.checkAnchorChanged()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">&quot;An anchor may not be changed after CoordinatorLayout&quot;</span></span><br><span class="line">                + <span class="string">&quot; measurement begins before layout is complete.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (lp.mAnchorView != <span class="keyword">null</span>) &#123;</span><br><span class="line">        layoutChildWithAnchor(child, lp.mAnchorView, layoutDirection);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lp.keyline &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">        layoutChildWithKeyline(child, lp.keyline, layoutDirection);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        layoutChild(child, layoutDirection);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">layoutChild</span><span class="params">(View child, <span class="keyword">int</span> layoutDirection)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> LayoutParams lp = (LayoutParams) child.getLayoutParams();</span><br><span class="line">    <span class="keyword">final</span> Rect parent = acquireTempRect();</span><br><span class="line">    parent.set(getPaddingLeft() + lp.leftMargin,</span><br><span class="line">            getPaddingTop() + lp.topMargin,</span><br><span class="line">            getWidth() - getPaddingRight() - lp.rightMargin,</span><br><span class="line">            getHeight() - getPaddingBottom() - lp.bottomMargin);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (mLastInsets != <span class="keyword">null</span> &amp;&amp; ViewCompat.getFitsSystemWindows(<span class="keyword">this</span>)</span><br><span class="line">            &amp;&amp; !ViewCompat.getFitsSystemWindows(child)) &#123;</span><br><span class="line">        <span class="comment">// If we&#x27;re set to handle insets but this child isn&#x27;t, then it has been measured as</span></span><br><span class="line">        <span class="comment">// if there are no insets. We need to lay it out to match.</span></span><br><span class="line">        parent.left += mLastInsets.getSystemWindowInsetLeft();</span><br><span class="line">        parent.top += mLastInsets.getSystemWindowInsetTop();</span><br><span class="line">        parent.right -= mLastInsets.getSystemWindowInsetRight();</span><br><span class="line">        parent.bottom -= mLastInsets.getSystemWindowInsetBottom();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> Rect out = acquireTempRect();</span><br><span class="line">    GravityCompat.apply(resolveGravity(lp.gravity), child.getMeasuredWidth(),</span><br><span class="line">            child.getMeasuredHeight(), parent, out, layoutDirection);</span><br><span class="line">    child.layout(out.left, out.top, out.right, out.bottom);</span><br><span class="line"></span><br><span class="line">    releaseTempRect(parent);</span><br><span class="line">    releaseTempRect(out);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 <code>layoutChild</code> 函数中同理，最终使得子 View 的位置发生偏移。</p>
+<h1 id="AppBarLayout-的-fitsSystemWindows-实现"><a href="#AppBarLayout-的-fitsSystemWindows-实现" class="headerlink" title="AppBarLayout 的 fitsSystemWindows 实现"></a>AppBarLayout 的 fitsSystemWindows 实现</h1><p>AppBarLayout 作为经常配合 CoordinateLayout 一起使用的视图组件，也拥有和普通 View 不一样的针对 fitsSystemWindows 的实现。在该组件的构造函数中就设置了 OnApplyWindowInsetsListener，无论 fitsSystemWindows 的值是否为 true。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">AppBarLayout</span><span class="params">(Context context, AttributeSet attrs)</span> </span>&#123;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">ViewCompat.setOnApplyWindowInsetsListener(</span><br><span class="line">    <span class="keyword">this</span>,</span><br><span class="line">    <span class="keyword">new</span> android.support.v4.view.OnApplyWindowInsetsListener() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> WindowInsetsCompat <span class="title">onApplyWindowInsets</span><span class="params">(View v, WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> onWindowInsetChanged(insets);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数通过调用 <code>onWindowInsetChanged</code> 处理 WindowInsets。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">WindowInsetsCompat <span class="title">onWindowInsetChanged</span><span class="params">(<span class="keyword">final</span> WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">  WindowInsetsCompat newInsets = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (ViewCompat.getFitsSystemWindows(<span class="keyword">this</span>)) &#123;</span><br><span class="line">    <span class="comment">// If we&#x27;re set to fit system windows, keep the insets</span></span><br><span class="line">    newInsets = insets;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// If our insets have changed, keep them and invalidate the scroll ranges...</span></span><br><span class="line">  <span class="keyword">if</span> (!ObjectsCompat.equals(lastInsets, newInsets)) &#123;</span><br><span class="line">    lastInsets = newInsets;</span><br><span class="line">    invalidateScrollRanges();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> insets;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">invalidateScrollRanges</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Invalidate the scroll ranges</span></span><br><span class="line">  totalScrollRange = INVALID_SCROLL_RANGE;</span><br><span class="line">  downPreScrollRange = INVALID_SCROLL_RANGE;</span><br><span class="line">  downScrollRange = INVALID_SCROLL_RANGE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>AppBarLayout 对于 fitsSystemWindows 的处理比较简单，就是在 fitsSystemWindows 为 true 的时候计算滑动范围会考虑系统状态栏的高度，需要注意的是 AppBarLayout 无论如何都不会消耗 WindowInsets。<br>具体效果就通过图片来说明，下图是没有进行任何滑动的样子，可以看到 AppBarLayout 中的 TextView 完全的显示出来了：</p>
+<p><img src="/images/20180326115217.jpg"></p>
+<p>在 fitsSystemWindows 值为 false 时，通过滑动屏幕可以让 TextView 完全退出，不在屏幕中显示：</p>
+<p><img src="/images/20180326115234.jpg"></p>
+<p>在 fitsSystemWindows 值为 true 时，通过滑动屏幕，TextView 无论如何都会保留和系统状态相同高度的最小高度：</p>
+<p><img src="/images/20180326115249.jpg"></p>
+<h1 id="CollapsingToolbarLayout-的-fitsSystemWindows-实现"><a href="#CollapsingToolbarLayout-的-fitsSystemWindows-实现" class="headerlink" title="CollapsingToolbarLayout 的 fitsSystemWindows 实现"></a>CollapsingToolbarLayout 的 fitsSystemWindows 实现</h1><p>CollapsingToolbarLayout 作为经常配合 AppBarLayout 使用的视图控件，也拥有独特的针对 fitsSystemWindows 的处理。和 AppBarLayout 很像，也是在构造函数中就设置了 OnApplyWindowInsetsListener：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">CollapsingToolbarLayout</span><span class="params">(Context context, AttributeSet attrs, <span class="keyword">int</span> defStyleAttr)</span> </span>&#123;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">ViewCompat.setOnApplyWindowInsetsListener(</span><br><span class="line">    <span class="keyword">this</span>,</span><br><span class="line">    <span class="keyword">new</span> android.support.v4.view.OnApplyWindowInsetsListener() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> WindowInsetsCompat <span class="title">onApplyWindowInsets</span><span class="params">(View v, WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> onWindowInsetChanged(insets);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同样核心也是在 <code>onWindowInsetChanged</code> 实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">WindowInsetsCompat <span class="title">onWindowInsetChanged</span><span class="params">(<span class="keyword">final</span> WindowInsetsCompat insets)</span> </span>&#123;</span><br><span class="line">WindowInsetsCompat newInsets = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (ViewCompat.getFitsSystemWindows(<span class="keyword">this</span>)) &#123;</span><br><span class="line">    <span class="comment">// If we&#x27;re set to fit system windows, keep the insets</span></span><br><span class="line">    newInsets = insets;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// If our insets have changed, keep them and invalidate the scroll ranges...</span></span><br><span class="line"><span class="keyword">if</span> (!ObjectsCompat.equals(lastInsets, newInsets)) &#123;</span><br><span class="line">    lastInsets = newInsets;</span><br><span class="line">    requestLayout();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Consume the insets. This is done so that child views with fitSystemWindows=true do not</span></span><br><span class="line"><span class="comment">// get the default padding functionality from View</span></span><br><span class="line"><span class="keyword">return</span> insets.consumeSystemWindowInsets();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实现很简单明了，在 fitSystemWindows 值为 true 时会记录当前的 WindowInsets 值，并请求重新进行布局，那么在 measure、layout 阶段肯定就针对 WindowInsets 做了处理，需要注意的是和 AppBarLayout 不同，无论如何 CollapsingToolbarLayout 都会消耗掉 WindowInsets。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onMeasure</span><span class="params">(<span class="keyword">int</span> widthMeasureSpec, <span class="keyword">int</span> heightMeasureSpec)</span> </span>&#123;</span><br><span class="line">  ensureToolbar();</span><br><span class="line">  <span class="keyword">super</span>.onMeasure(widthMeasureSpec, heightMeasureSpec);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> mode = MeasureSpec.getMode(heightMeasureSpec);</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> topInset = lastInsets != <span class="keyword">null</span> ? lastInsets.getSystemWindowInsetTop() : <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">if</span> (mode == MeasureSpec.UNSPECIFIED &amp;&amp; topInset &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// If we have a top inset and we&#x27;re set to wrap_content height we need to make sure</span></span><br><span class="line">    <span class="comment">// we add the top inset to our height, therefore we re-measure</span></span><br><span class="line">    heightMeasureSpec =</span><br><span class="line">        MeasureSpec.makeMeasureSpec(getMeasuredHeight() + topInset, MeasureSpec.EXACTLY);</span><br><span class="line">    <span class="keyword">super</span>.onMeasure(widthMeasureSpec, heightMeasureSpec);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 measure 阶段，如果 CollapsingToolbarLayout 高度被设置为 wrap_content，那么会在正常测量得到的高度上再加上系统状态栏的高度以能容纳绘制系统状态栏背景的需求。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onLayout</span><span class="params">(<span class="keyword">boolean</span> changed, <span class="keyword">int</span> left, <span class="keyword">int</span> top, <span class="keyword">int</span> right, <span class="keyword">int</span> bottom)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.onLayout(changed, left, top, right, bottom);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (lastInsets != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// Shift down any views which are not set to fit system windows</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> insetTop = lastInsets.getSystemWindowInsetTop();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>, z = getChildCount(); i &lt; z; i++) &#123;</span><br><span class="line">      <span class="keyword">final</span> View child = getChildAt(i);</span><br><span class="line">      <span class="keyword">if</span> (!ViewCompat.getFitsSystemWindows(child)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (child.getTop() &lt; insetTop) &#123;</span><br><span class="line">          <span class="comment">// If the child isn&#x27;t set to fit system windows but is drawing within</span></span><br><span class="line">          <span class="comment">// the inset offset it down</span></span><br><span class="line">          ViewCompat.offsetTopAndBottom(child, insetTop);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 layout 阶段，如果子 View 没有设置 fitSystemWindows 值为 true 的话就会对子 View 进行一个位移，使得该子 View 绘制在系统状态栏的下方，不会被系统状态栏遮挡，具体效果还是用图片来进行说明。<br>fitSystemWindows 值为 false 时效果：</p>
+<p><img src="/images/20180326143044.jpg"></p>
+<p>fitSystemWindows 值为 true 时效果：</p>
+<p><img src="/images/20180326143032.jpg"></p>
+<p>至此，便分析完了常见的用到 fitSystemWindows 的 View 的场景。</p>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=_mGDMVRO3iE">droidcon NYC 2017 - Becoming a master window fitter</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2018/03/25/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2-fitsSystemWindows/" title="深入探索 fitsSystemWindows">https://blog.chrnie.com/2018/03/25/深入探索-fitsSystemWindows/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/" rel="prev" title="Gradle 使用指南">
+      <i class="fa fa-chevron-left"></i> Gradle 使用指南
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/05/22/Glide-%E4%B8%AD-BitmapPool-%E9%AB%98%E6%95%88%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6/" rel="next" title="Glide 中 BitmapPool 的极致性能优化">
+      Glide 中 BitmapPool 的极致性能优化 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#fitsSystemWindows-%E9%BB%98%E8%AE%A4%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.</span> <span class="nav-text">fitsSystemWindows 默认实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E7%B3%BB%E7%BB%9F%E6%A0%8F%E9%AB%98%E5%BA%A6%E5%8F%82%E6%95%B0"><span class="nav-number">2.</span> <span class="nav-text">获取系统栏高度参数</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#CoordinateLayout-%E7%9A%84-fitsSystemWindows-%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">CoordinateLayout 的 fitsSystemWindows 实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#AppBarLayout-%E7%9A%84-fitsSystemWindows-%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.</span> <span class="nav-text">AppBarLayout 的 fitsSystemWindows 实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#CollapsingToolbarLayout-%E7%9A%84-fitsSystemWindows-%E5%AE%9E%E7%8E%B0"><span class="nav-number">5.</span> <span class="nav-text">CollapsingToolbarLayout 的 fitsSystemWindows 实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '0c0314d12002db4b5573297acf66b4fd',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

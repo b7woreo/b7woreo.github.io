@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="对于 Android 应用开发工程师来说想要技术上更上一层楼，那么阅读和学习 aosp 代码可以说是一个必经之路，因为通过学习 aosp 代码能更好的理解 Android 系统整个运作机制，从而指导我们更好的设计应用技术方案。 虽然现在谷歌搭建好了在线的源码阅读平台：Android Code Search，但是使用体验不如人意。而且纸上得来终觉浅，只有实际修改代码运行才会有更深的理解，这里我将分享">
+<meta property="og:type" content="article">
+<meta property="og:title" content="aosp 源码学习环境搭建">
+<meta property="og:url" content="https://blog.chrnie.com/2021/06/08/aosp-%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="对于 Android 应用开发工程师来说想要技术上更上一层楼，那么阅读和学习 aosp 代码可以说是一个必经之路，因为通过学习 aosp 代码能更好的理解 Android 系统整个运作机制，从而指导我们更好的设计应用技术方案。 虽然现在谷歌搭建好了在线的源码阅读平台：Android Code Search，但是使用体验不如人意。而且纸上得来终觉浅，只有实际修改代码运行才会有更深的理解，这里我将分享">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210530122008.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210530122652.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210530122652.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210606173123.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210606173918.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210606174138.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20210607074543.png">
+<meta property="article:published_time" content="2021-06-08T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta property="article:tag" content="aosp">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.chrnie.com/images/20210530122008.png">
+
+<link rel="canonical" href="https://blog.chrnie.com/2021/06/08/aosp-%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>aosp 源码学习环境搭建 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2021/06/08/aosp-%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          aosp 源码学习环境搭建
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-06-08 00:00:00" itemprop="dateCreated datePublished" datetime="2021-06-08T00:00:00Z">2021-06-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>对于 Android 应用开发工程师来说想要技术上更上一层楼，那么阅读和学习 aosp 代码可以说是一个必经之路，因为通过学习 aosp 代码能更好的理解 Android 系统整个运作机制，从而指导我们更好的设计应用技术方案。</p>
+<p>虽然现在谷歌搭建好了在线的源码阅读平台：<a target="_blank" rel="noopener" href="https://cs.android.com/?hl=zh-cn">Android Code Search</a>，但是使用体验不如人意。而且纸上得来终觉浅，只有实际修改代码运行才会有更深的理解，这里我将分享我的 aosp 学习环境搭建的过程供大家参考。</p>
+<h1 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h1><p>最好是有一台运行 Linux 系统的电脑，Linux 的发行版本不做限制依据个人喜好自行选择。本文的所有操作均是在 Linux 环境下完成，在其他操作系统上可能会不奏效。</p>
+<p>即使宿主电脑已经是运行 Linux 系统了依然不建议直接使用宿主电脑执行编译操作，因为你很有可能会在编译过程中遇到一些莫名其妙的问题。而根据<a target="_blank" rel="noopener" href="https://source.android.com/setup/build/initializing">官方文档</a>的说法，谷歌会保证 aosp 是能够在 Ubuntu 14.04 正常完成编译的：</p>
+<blockquote>
+<p>The Android build is routinely tested in house on Ubuntu LTS (14.04) and Debian testing. Most other distributions should have the required build tools available.</p>
+</blockquote>
+<p>所以强烈推荐大家使用 docker 部署一个专用的编译环境，官方的 docker 镜像部署及使用指南可以参考：<a target="_blank" rel="noopener" href="https://android.googlesource.com/platform/build/+/master/tools/docker">tools/docker/README.md</a>。不过官方的 Dockerfile 不一定能正常构建，因为 <a target="_blank" rel="noopener" href="https://android.googlesource.com/platform/build/+/master/tools/docker/Dockerfile">tools/docker/Dockerfile</a> 会在构建镜像时会下载 repo 工具而且会对其 sha256 进行校验。repo 版本是一直在更新的，而 Dockerfile 没有更新，所以可能会出现校验失败的问题，这个就需要自行更新哈希值或移除校验步骤。所以官方给的 Dockerfile 只是一个参考，大家可以根据自身的需要进行修改，增加或移除一些不必要的构建过程。</p>
+<p>这里我给大家贴出我修改后的 Dockerfile ：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> ubuntu:<span class="number">18.04</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ARG</span> userid</span><br><span class="line"><span class="keyword">ARG</span> groupid</span><br><span class="line"><span class="keyword">ARG</span> username</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apt-get update</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Install required packages, see: https://source.android.com/setup/build/initializing#installing-required-packages-ubuntu-1804</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Instal addition required packages</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apt-get install -y openjdk-8-jdk rsync python python3</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Install repo</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> curl -o /usr/<span class="built_in">local</span>/bin/repo https://mirrors.tuna.tsinghua.edu.cn/git/git-repo \</span></span><br><span class="line"><span class="bash"> &amp;&amp; chmod a+x /usr/<span class="built_in">local</span>/bin/repo</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Install my packages</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apt-get install -y zsh</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Create group &amp; user</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> groupadd -g <span class="variable">$groupid</span> <span class="variable">$username</span> \</span></span><br><span class="line"><span class="bash"> &amp;&amp; useradd -m -u <span class="variable">$userid</span> -g <span class="variable">$groupid</span> <span class="variable">$username</span> \</span></span><br><span class="line"><span class="bash"> &amp;&amp; <span class="built_in">echo</span> <span class="variable">$username</span> &gt;/root/username</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Setup env</span></span><br><span class="line"><span class="keyword">ENV</span> HOME=/home/$username</span><br><span class="line"><span class="keyword">ENV</span> <span class="keyword">USER</span>=$username</span><br><span class="line"><span class="keyword">ENV</span> DISPLAY=:<span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ENTRYPOINT</span><span class="bash"> chroot --userspec=$(cat /root/username):$(cat /root/username) / /bin/zsh -i</span></span><br></pre></td></tr></table></figure>
+
+<p>由于 Ubuntu14.04 安装 jdk8 不方便，最终我还是选择了 Ubuntu18.04 这个发行版本。相较于与官方的 Dockerfile 的不同就是使用了清华的镜像并且安装了 zsh 替代 bash。除此之外比较重要的一点是设置了 <code>DISPLAY</code> 环境变量，这样就可以在容器内直接运行 GUI 程序，例如：Android Emulator。</p>
+<p>通过 <code>docker build --build-arg userid=$(id -u) --build-arg groupid=$(id -g) --build-arg username=$(id -un) -t android-build-trusty .</code> 命令即可完成镜像的编译，编译完成后通过如下命令启动容器环境：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">docker run -it --rm \</span><br><span class="line">  --network=host \</span><br><span class="line">  --privileged \</span><br><span class="line">  -v $(<span class="built_in">echo</span> ~):$(<span class="built_in">echo</span> ~) \</span><br><span class="line">  android-build-trusty</span><br></pre></td></tr></table></figure>
+
+<p>这里给大家简单说明一下各个参数的作用：</p>
+<ul>
+<li><code>-it --rm</code>：容器环境是一次性的，推出后会自动销毁，再此进入又将是全新的。</li>
+<li><code>--network=host</code>：共享宿主机器的网络环境，主要用途就是宿主机器可以直接访问容器内启动的模拟器。</li>
+<li><code>--privileged</code>：容器可以访问宿主机器的所有硬件设备，例如当在容器内使用 x86 镜像启动模拟器时需要访问 /dev/kvm 设备。</li>
+<li><code>-v $(echo ~):$(echo ~)</code>：将宿主机器的 <code>$HOME</code> 目录挂载到容器的 <code>$HOME</code> 目录，一是可以方便的访问各种资源，二是一般情况下 zsh 的配置保存在 <code>~/.zshrc</code> 中，这样可以保证在容器内 zsh 的使用体验是和在宿主机器中一致的。</li>
+</ul>
+<h1 id="源码下载"><a href="#源码下载" class="headerlink" title="源码下载"></a>源码下载</h1><h2 id="repo"><a href="#repo" class="headerlink" title="repo"></a>repo</h2><p>aosp 项目是由一系列的 git 仓库组成的，在下载 aosp 源码前首先需要下载一个名叫：<a target="_blank" rel="noopener" href="https://source.android.com/setup/develop?hl=zh-cn#repo">repo</a> 的软件，该软件主要用途是为了简化对 aosp 代码的管理操作流程。由于众多因素的影响，推荐大家使用清华的镜像下载，相关的使用文档可以参考：<a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/help/git-repo/">Git Repo 镜像使用帮助</a>。可以把 repo 的安装放在 Docker 镜像的构建流程中一并完成。</p>
+<h2 id="aosp"><a href="#aosp" class="headerlink" title="aosp"></a>aosp</h2><h3 id="配置代理"><a href="#配置代理" class="headerlink" title="配置代理"></a>配置代理</h3><p>装好 repo 后便可以开始 aosp 源码下载，这里同样推荐大家使用清华的源镜像进行下载，只需要在 git 配置中设置把 <a target="_blank" rel="noopener" href="https://android.googlesource.com/">https://android.googlesource.com</a> 链接替换为 ：<a target="_blank" rel="noopener" href="https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/">https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/</a> 即可无感知的使用镜像：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git config --global url.https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com</span><br></pre></td></tr></table></figure>
+
+<h3 id="下载源码"><a href="#下载源码" class="headerlink" title="下载源码"></a>下载源码</h3><p>在 <a target="_blank" rel="noopener" href="https://android.googlesource.com/platform/manifest/+refs">android/platform/manifest</a> 中挑选好想要下载的源码版本的分支，例如：android-10.0.0_r1，然后执行以下命令完成工作目录初始化：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir WORKING_DIRECTORY</span><br><span class="line"><span class="built_in">cd</span> WORKING_DIRECTORY</span><br><span class="line">repo init -u https://android.googlesource.com -b android-10.0.0_r1</span><br></pre></td></tr></table></figure>
+
+<p>接着只需要在工作目录中执行 <code>repo sync</code> 即可开始源码下载，在下载过程中可能会出现一些异常中断的情况，只要多运行几次 <code>repo sync</code> 命令最终都能成功完成代码同步。</p>
+<h1 id="编译运行"><a href="#编译运行" class="headerlink" title="编译运行"></a>编译运行</h1><p>在 docker  环境中的源码根目录下执行以下命令即可开始编译：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">. build/envsetup.sh</span><br><span class="line">lunch aosp_x86_64-eng</span><br><span class="line">m</span><br></pre></td></tr></table></figure>
+
+<p>事例中编译的系统版本变种是：aosp_x86_64-eng，因为 x86_64 在模拟器中有较高的运行效率，方便我们直接在模拟器中测试编译好的系统。成功完成编译后执行以下命令即可通过模拟器运行编译好的系统：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">. build/envsetup.sh</span><br><span class="line">lunch aosp_x86_64-eng</span><br><span class="line">emulator -writable-system</span><br></pre></td></tr></table></figure>
+
+<p>在通过 <code>emulator</code> 命令启动虚拟机时增加了 <code>-writable-system</code> 参数，这个参数的作用会在下文再详细解释。</p>
+<h1 id="代码修改"><a href="#代码修改" class="headerlink" title="代码修改"></a>代码修改</h1><h2 id="目录结构"><a href="#目录结构" class="headerlink" title="目录结构"></a>目录结构</h2><p>在介绍如何编辑代码前首先需要了解一下 aosp 项目的整个目录结构，理论上只要知道了目录的构成情况后就可以在任何的编辑器中索引、编辑代码了（需要为对应的编辑器写好项目结构的配置文件）。</p>
+<p>对于 Android 应用开发人员而言，一般我们需要阅读学习的是 framework 层的代码。这一层级的代码主要由 java 实现，包括了 AndroidSdk 中提供的接口和系统服务的实现代码，主要包括以下几个目录的代码：</p>
+<ul>
+<li><code>frameworks/base/core</code>：AndroidSdk API</li>
+<li><code>frameworks/base/graphics</code>：AndroidSdk 图形绘制相关 API </li>
+<li><code>frameworks/base/services</code>：Android 系统服务</li>
+<li><code>libcore/ojluni</code>：Java 标准 API</li>
+</ul>
+<h2 id="使用-Android-Studio-编辑"><a href="#使用-Android-Studio-编辑" class="headerlink" title="使用 Android Studio 编辑"></a>使用 Android Studio 编辑</h2><p>因为 aosp 的目录结构比较特殊，Android Studio 没办法识别对于的模块及代码，需要在成功完成一次全量编译后，在源码根目录下运行：<code>mmm development/tools/idegen &amp;&amp; development/tools/idegen/idegen.sh</code> 命令使得在源码根目录下生成 android.ipr 文件，用 Android Studio 直接打开该文件才能让 Android Studio 知道如何对代码进行索引以支持跳转功能，参考文档见：<a target="_blank" rel="noopener" href="https://android.googlesource.com/platform/development/+/refs/heads/master/tools/idegen/README">/tools/idegen/README</a>。</p>
+<p>如果以上步骤操作完成后在 Android Studio 中还是不能正常进行代码跳转，需要逐个确认以下配置是否正确：</p>
+<ol>
+<li>在新版本的 Android Studio 中打开 android.ipr 时会提示该工程结构已过时，需要进行转换。点击 <code>Convert</code> 按钮后 <code>android.iml</code> 文件内容会发生变化：</li>
+</ol>
+<p><img src="/images/20210530122008.png"></p>
+<p>其中 <code>sourceFolder</code> 全部被标记成了 <code>kotlin-test</code> 或者 <code>kotlin-source</code>，我们需要将其全部替换为 <code>java-test</code> 或者 <code>java-source</code>。</p>
+<ol start="2">
+<li>确保移除了所有的外部依赖，形如下面两张图所示：</li>
+</ol>
+<p><img src="/images/20210530122652.png"></p>
+<p><img src="/images/20210530122652.png"></p>
+<ol start="3">
+<li>在 <strong>Edit Custom Properties</strong> 中添加了 <code>idea.max.intellisense.filesize=100000</code> 配置，不如无法正确的索引 R 文件。</li>
+</ol>
+<p>准备好编辑环境后，就可以开始尝试修改代码了。首先可以尝试增加一行日志，接着直接在源码根目录执行 <code>m</code> 命令即可开始增量编译。增量编译的时间相较于全量编译会有很大的缩短，不过相较于应用编译的时间还是比较长的。当编译完成后再次通过 <code>emulator</code> 打开模拟器运行的就是已经被修改过的代码了。</p>
+<h2 id="修改-API-接口"><a href="#修改-API-接口" class="headerlink" title="修改 API 接口"></a>修改 API 接口</h2><p>如果有修改公开的 API 接口，那么需要运行：<code>make update-api</code> 命令以更新 API 接口文档，否则编译会出错。</p>
+<h1 id="断点调试"><a href="#断点调试" class="headerlink" title="断点调试"></a>断点调试</h1><p>在开发过程中不可避免的会使用到断点调试功能，这个功能在阅读学习代码的过程中也同样重要，通过断点堆栈可以轻松方便的了解方法调用的整个链路情况。在断点调试系统服务代码时需要使用到 AndroidStudio。首先需要将项目的 Sdk 改成 Android API（如下图所示），否则 AndroidStudio 可能无法正常识别到设备。</p>
+<p><img src="/images/20210606173123.png"></p>
+<p><img src="/images/20210606173918.png"></p>
+<p>接着点击 <strong>Attach Debugger to Android Process</strong> 并在弹窗中选择 <strong>system_process</strong> 进程：</p>
+<p><img src="/images/20210606174138.png"></p>
+<p>最后在合适的地方加上断点并执行程序运行到该位置即可，例如在 <code>ActivityTaskManagerService#startActivity</code> 添加断点，在 Activity 的启动过程中就会出发中断，可以在 AndroidStudio 中完成单步调试：</p>
+<p><img src="/images/20210607074543.png"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2021/06/08/aosp-%E6%BA%90%E7%A0%81%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" title="aosp 源码学习环境搭建">https://blog.chrnie.com/2021/06/08/aosp-源码学习环境搭建/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+              <a href="/tags/aosp/" rel="tag"># aosp</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/05/23/%E5%BC%80%E5%8F%91%E8%B0%83%E8%AF%95-sdk-%E9%A1%B9%E7%9B%AE%E7%9A%84%E4%B8%80%E7%82%B9%E5%B0%8F%E6%8A%80%E5%B7%A7/" rel="prev" title="开发调试 sdk 项目的一点小技巧">
+      <i class="fa fa-chevron-left"></i> 开发调试 sdk 项目的一点小技巧
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/10/10/Jetpack-Compose-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%B9%8B-Snapshot/" rel="next" title="Jetpack Compose 源码解析之 Snapshot">
+      Jetpack Compose 源码解析之 Snapshot <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="nav-number">1.</span> <span class="nav-text">环境准备</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E4%B8%8B%E8%BD%BD"><span class="nav-number">2.</span> <span class="nav-text">源码下载</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#repo"><span class="nav-number">2.1.</span> <span class="nav-text">repo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#aosp"><span class="nav-number">2.2.</span> <span class="nav-text">aosp</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E4%BB%A3%E7%90%86"><span class="nav-number">2.2.1.</span> <span class="nav-text">配置代理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BD%E6%BA%90%E7%A0%81"><span class="nav-number">2.2.2.</span> <span class="nav-text">下载源码</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E8%BF%90%E8%A1%8C"><span class="nav-number">3.</span> <span class="nav-text">编译运行</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E4%BF%AE%E6%94%B9"><span class="nav-number">4.</span> <span class="nav-text">代码修改</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84"><span class="nav-number">4.1.</span> <span class="nav-text">目录结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-Android-Studio-%E7%BC%96%E8%BE%91"><span class="nav-number">4.2.</span> <span class="nav-text">使用 Android Studio 编辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9-API-%E6%8E%A5%E5%8F%A3"><span class="nav-number">4.3.</span> <span class="nav-text">修改 API 接口</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%96%AD%E7%82%B9%E8%B0%83%E8%AF%95"><span class="nav-number">5.</span> <span class="nav-text">断点调试</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '8aa66cba49b827047a7b93538e3cd4c6',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

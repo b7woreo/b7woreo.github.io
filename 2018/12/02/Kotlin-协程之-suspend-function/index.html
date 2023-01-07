@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Kotlin 的协程设计可谓是非常的简洁，除了增加了 suspend 关键字，其余的所有功能都在标准库中实现。而 suspend 关键字正是整个协程实现的关键，本文将探索 suspend 关键字到底做了什么。 编写 suspend function12345suspend fun foo() &amp;#123;    println(&quot;start foo suspend function&amp;qu">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kotlin 协程之 suspend function">
+<meta property="og:url" content="https://blog.chrnie.com/2018/12/02/Kotlin-%E5%8D%8F%E7%A8%8B%E4%B9%8B-suspend-function/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="Kotlin 的协程设计可谓是非常的简洁，除了增加了 suspend 关键字，其余的所有功能都在标准库中实现。而 suspend 关键字正是整个协程实现的关键，本文将探索 suspend 关键字到底做了什么。 编写 suspend function12345suspend fun foo() &amp;#123;    println(&quot;start foo suspend function&amp;qu">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-12-02T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Kotlin">
+<meta property="article:tag" content="Kotlin Coroutine">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2018/12/02/Kotlin-%E5%8D%8F%E7%A8%8B%E4%B9%8B-suspend-function/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Kotlin 协程之 suspend function | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2018/12/02/Kotlin-%E5%8D%8F%E7%A8%8B%E4%B9%8B-suspend-function/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kotlin 协程之 suspend function
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-12-02 00:00:00" itemprop="dateCreated datePublished" datetime="2018-12-02T00:00:00Z">2018-12-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Kotlin 的协程设计可谓是非常的简洁，除了增加了 suspend 关键字，其余的所有功能都在标准库中实现。而 suspend 关键字正是整个协程实现的关键，本文将探索 suspend 关键字到底做了什么。</p>
+<h1 id="编写-suspend-function"><a href="#编写-suspend-function" class="headerlink" title="编写 suspend function"></a>编写 suspend function</h1><figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">suspend</span> <span class="function"><span class="keyword">fun</span> <span class="title">foo</span><span class="params">()</span></span> &#123;</span><br><span class="line">    println(<span class="string">&quot;start foo suspend function&quot;</span>)</span><br><span class="line">    delay(<span class="number">1000</span>)</span><br><span class="line">    println(<span class="string">&quot;end foo suspend function&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面就是一个简单的 suspend function 示例，首先打印了一句 “start foo suspend function” 表明进入函数，然后调用 delay 方法暂停函数的执行，等待暂停完成后恢复函数的执行，打印了一句 “end foo suspend function” 表明函数执行结束将退出。</p>
+<h1 id="反编译-suspend-function"><a href="#反编译-suspend-function" class="headerlink" title="反编译 suspend function"></a>反编译 suspend function</h1><h2 id="Idea-Kotlin-Plugin"><a href="#Idea-Kotlin-Plugin" class="headerlink" title="Idea Kotlin Plugin"></a>Idea Kotlin Plugin</h2><p>一般 Kotlin 的代码编写都是在 Idea 或者 Android Studio 上完成的，官方提供了插件可以用于查看编写好的 Kotlin 代码的 bytecode 并可以通过 bytecode 还原成 Java 代码。这方便我们探究 Kotlin 编译器对 Kotlin 代码的操作。<br>使用方法： </p>
+<ol start="0">
+<li>在 Idea 中打开想反编译的 Kotlin 源码文件</li>
+<li>点击 Idea 菜单栏的 Tools 菜单</li>
+<li>选中 Kotlin  菜单项</li>
+<li>点击 Show Kotlin Bytecode 选项（此时会弹出 Kotlin Bytecode 窗口）</li>
+<li>点击 Kotlin Bytecode 窗口上方的 Decompile 按钮</li>
+</ol>
+<h2 id="反编译后的-suspend-function"><a href="#反编译后的-suspend-function" class="headerlink" title="反编译后的 suspend function"></a>反编译后的 suspend function</h2><figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">public</span> static <span class="keyword">final</span> Object test(<span class="meta">@NotNull</span> Continuation var0) &#123;</span><br><span class="line">    Object $continuation;</span><br><span class="line">    label28: &#123;</span><br><span class="line">        <span class="keyword">if</span> (var0 instanceof &lt;undefinedtype&gt;) &#123;</span><br><span class="line">        $continuation = (&lt;undefinedtype&gt;)var0;</span><br><span class="line">        <span class="keyword">if</span> ((((&lt;undefinedtype&gt;)$continuation).label &amp; Integer.MIN_VALUE) != <span class="number">0</span>) &#123;</span><br><span class="line">            ((&lt;undefinedtype&gt;)$continuation).label -= Integer.MIN_VALUE;</span><br><span class="line">            <span class="keyword">break</span> label28;</span><br><span class="line">        &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        $continuation = new ContinuationImpl(var0) &#123;</span><br><span class="line">        <span class="comment">// $FF: synthetic field</span></span><br><span class="line">        Object result;</span><br><span class="line">        int label;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Nullable</span></span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">final</span> Object invokeSuspend(<span class="meta">@NotNull</span> Object result) &#123;</span><br><span class="line">            <span class="keyword">this</span>.result = result;</span><br><span class="line">            <span class="keyword">this</span>.label |= Integer.MIN_VALUE;</span><br><span class="line">            <span class="keyword">return</span> MainKt.test(<span class="keyword">this</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Object var2 = ((&lt;undefinedtype&gt;)$continuation).result;</span><br><span class="line">    Object var4 = IntrinsicsKt.getCOROUTINE_SUSPENDED();</span><br><span class="line">    String var1;</span><br><span class="line">    switch(((&lt;undefinedtype&gt;)$continuation).label) &#123;</span><br><span class="line">    case <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">if</span> (var2 instanceof Failure) &#123;</span><br><span class="line">        <span class="keyword">throw</span> ((Failure)var2).exception;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        var1 = <span class="string">&quot;start test suspend function&quot;</span>;</span><br><span class="line">        System.<span class="keyword">out</span>.println(var1);</span><br><span class="line">        ((&lt;undefinedtype&gt;)$continuation).label = <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span> (DelayKt.delay(<span class="number">1000L</span>, (Continuation)$continuation) == var4) &#123;</span><br><span class="line">        <span class="keyword">return</span> var4;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    case <span class="number">1</span>:</span><br><span class="line">        <span class="keyword">if</span> (var2 instanceof Failure) &#123;</span><br><span class="line">        <span class="keyword">throw</span> ((Failure)var2).exception;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    default:</span><br><span class="line">        <span class="keyword">throw</span> new IllegalStateException(<span class="string">&quot;call to &#x27;resume&#x27; before &#x27;invoke&#x27; with coroutine&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    var1 = <span class="string">&quot;end test suspend function&quot;</span>;</span><br><span class="line">    System.<span class="keyword">out</span>.println(var1);</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">Unit</span>.INSTANCE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将上文提到的 foo 函数反编译后将得到如上所示的 Java 代码。可见，每个 suspend function 最终会被编译成一个无状态的静态函数并且该函数比我们声明的函数的参数列表中多出了一个参数：Continuation，Continuation 中携带着该函数的运行状态。</p>
+<h1 id="suspend-function-运行步骤"><a href="#suspend-function-运行步骤" class="headerlink" title="suspend function 运行步骤"></a>suspend function 运行步骤</h1><ol start="0">
+<li>当我们在 suspend function A 中调用 suspend function B 时，会将 suspend function A 的 Continuation 当做参数传入调用的 suspend function B 中。每个 suspend function 都会由编译器生成一个特定的 Continuation 子类，所以一开始进入方法时，首先会检查传入的 Continuation 类型与当前 suspend function 所生成的 Continuation 的类型是否一致。如果 Continuation 类型不一致的话说明是被别的 suspend function 调用进入该方法，需要生成一个新的 Continuation 实例记录当前函数的运行状态，新的 Continuation 是 ContinuationImpl 的子类型。如果 Continuation 类型一致的话，说明该函数是从上一个中断点恢复继续执行的，则不需要创建新的 Continuation 实例。  </li>
+<li>从 Continuation 中的 result 字段中，可以得到上一次 suspend function 中断后运行的结果。例如在我们的示例中调用了 delay 函数，该函数的返回值类型是 Unit 类型，那么在顺利执行 delay 函数并恢复 foo 函数执行时，Continuation.result 中的结果应该是 Unit.INSTANCE。但是如果 delay 被取消了，那么 delay 会抛出一个 CancellationException，异常会被封装在 Failure 类型中。  </li>
+<li>Continuation 中的 label 字段描述了当前函数运行到了哪个阶段。通过 label 跳转到对应的暂停点恢复函数的执行，在我们编写 Kotlin 代码时，每一次对 suspend function 的调用都会由编译器自动生成一个新的中断恢复点，具体实现方法就是在 switch 中增加一个 case 代码块。  </li>
+<li>进入到 label 对应的代码块后，首先会检查 result 的类型，在上面有提到过，调用的 suspend function 抛出异常时，会被封装在 Failure 类型中，如果 result 是 Failure 类型的，那么就需要抛出封装在内的异常，否则函数继续执行，直到遇到对 suspend function 的调用。在调用 suspend function 前，首先会将 Continuation.label 设置为当函数恢复执行后需要进入的对应代码块的 label 值（一般就是当前 label 值 +1），在调用 suspend function 时，如果调用的 suspend function 直接返回的结果是 COROUTINE_SUSPENDED，那么函数也将返回，等待恢复。  </li>
+<li>最终函数会返回对应的执行结果，例如示例中函数签名返回值类型为 Unit，那么最后返回了 Unit.INSTANCE。  </li>
+</ol>
+<h1 id="ContinuationImpl-实现原理"><a href="#ContinuationImpl-实现原理" class="headerlink" title="ContinuationImpl 实现原理"></a>ContinuationImpl 实现原理</h1><p>ContinuationImpl 实现了 Continuation 接口，Continuation 接口代码如下：  </p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Interface representing a continuation after a suspension point that returns value of type `T`.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@SinceKotlin(<span class="meta-string">&quot;1.3&quot;</span>)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Continuation</span>&lt;<span class="type">in T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Context of the coroutine that corresponds to this continuation.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">val</span> context: CoroutineContext</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Resumes the execution of the corresponding coroutine passing successful or failed [result] as the</span></span><br><span class="line"><span class="comment">     * return value of the last suspension point.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">T</span>&gt;)</span></span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从接口签名可以看出，Continuation 实际上就是一个带有回调执行环境的回调接口，每当一个 suspend function 执行完成之后，就会通过调用 resumeWith 方法告知调用方执行结果。那么ContinuationImpl 是如何实现 resumeWith 函数的呢？<br>ContinuationImpl 继承自 BaseContinuationImpl，resumeWith 方法就在该类中被实现。具体实现如下：   </p>
+<figure class="highlight kotlin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">resumeWith</span><span class="params">(result: <span class="type">Result</span>&lt;<span class="type">Any</span>?&gt;)</span></span> &#123;</span><br><span class="line">    <span class="comment">// Invoke &quot;resume&quot; debug probe only once, even if previous frames are &quot;resumed&quot; in the loop below, too</span></span><br><span class="line">    probeCoroutineResumed(<span class="keyword">this</span>)</span><br><span class="line">    <span class="comment">// This loop unrolls recursion in current.resumeWith(param) to make saner and shorter stack traces on resume</span></span><br><span class="line">    <span class="keyword">var</span> current = <span class="keyword">this</span></span><br><span class="line">    <span class="keyword">var</span> param = result</span><br><span class="line">    <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">        with(current) &#123;</span><br><span class="line">            <span class="keyword">val</span> completion = completion!! <span class="comment">// fail fast when trying to resume continuation without completion</span></span><br><span class="line">            <span class="keyword">val</span> outcome: Result&lt;Any?&gt; =</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">val</span> outcome = invokeSuspend(param)</span><br><span class="line">                    <span class="keyword">if</span> (outcome === COROUTINE_SUSPENDED) <span class="keyword">return</span></span><br><span class="line">                    Result.success(outcome)</span><br><span class="line">                &#125; <span class="keyword">catch</span> (exception: Throwable) &#123;</span><br><span class="line">                    Result.failure(exception)</span><br><span class="line">                &#125;</span><br><span class="line">            releaseIntercepted() <span class="comment">// this state machine instance is terminating</span></span><br><span class="line">            <span class="keyword">if</span> (completion <span class="keyword">is</span> BaseContinuationImpl) &#123;</span><br><span class="line">                <span class="comment">// unrolling recursion via loop</span></span><br><span class="line">                current = completion</span><br><span class="line">                param = outcome</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">// top-level completion reached -- invoke and return</span></span><br><span class="line">                completion.resumeWith(outcome)</span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该实现的核心内容在 while 循环体内。首先调用 invokeSuspend 方法，该方法由编译器实现，实现的具体内容就是调用对应的 suspend function 由编译器生成的静态方法，返回结果表明了函数的执行状态。如果调用了 suspend function 导致函数暂停了，那么返回值为 COROUTINE_SUSPEND，将直接退出 resumeWith 方法，等待 suspend function 执行结束后的下一次 resumeWith 调用。如果该函数已经执行完成，那么执行结果将被封装在 Result 中，通过 completion.resumeWith 告知调用方。<br>这里有一个优化，当调用方的 Continuation 的实现也是 BaseContinuationImpl 的子类时，不通过调用 resumeWith 方法的形式通知调用方结果，而是直接更新循环的参数（current 和 param）再执行一次循环体中的内容，这样可以减少一次函数调用栈的分配，防止递归深度过大而出现爆栈问题。</p>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=YrrUCSi72E8">KotlinConf 2017 - Deep Dive into Coroutines on JVM by Roman Elizarov</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2018/12/02/Kotlin-%E5%8D%8F%E7%A8%8B%E4%B9%8B-suspend-function/" title="Kotlin 协程之 suspend function">https://blog.chrnie.com/2018/12/02/Kotlin-协程之-suspend-function/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Kotlin/" rel="tag"># Kotlin</a>
+              <a href="/tags/Kotlin-Coroutine/" rel="tag"># Kotlin Coroutine</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/08/19/%E5%85%B3%E4%BA%8E%E9%80%9A%E7%94%A8%E7%9A%84%E5%AF%B9%E8%B1%A1%E6%B1%A0/" rel="prev" title="关于通用的对象池">
+      <i class="fa fa-chevron-left"></i> 关于通用的对象池
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/02/18/Gradle-%E6%89%93%E5%8C%85%E4%B8%8A%E4%BC%A0%E5%88%B0-maven-%E4%BB%93%E5%BA%93%E5%B0%8F%E8%AE%B0/" rel="next" title="Gradle 打包上传到 maven 仓库小记">
+      Gradle 打包上传到 maven 仓库小记 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%96%E5%86%99-suspend-function"><span class="nav-number">1.</span> <span class="nav-text">编写 suspend function</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%8D%E7%BC%96%E8%AF%91-suspend-function"><span class="nav-number">2.</span> <span class="nav-text">反编译 suspend function</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Idea-Kotlin-Plugin"><span class="nav-number">2.1.</span> <span class="nav-text">Idea Kotlin Plugin</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%8D%E7%BC%96%E8%AF%91%E5%90%8E%E7%9A%84-suspend-function"><span class="nav-number">2.2.</span> <span class="nav-text">反编译后的 suspend function</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#suspend-function-%E8%BF%90%E8%A1%8C%E6%AD%A5%E9%AA%A4"><span class="nav-number">3.</span> <span class="nav-text">suspend function 运行步骤</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#ContinuationImpl-%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">ContinuationImpl 实现原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">5.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : 'd709f209a6a96b7d4f3f5ac7eb8da88a',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

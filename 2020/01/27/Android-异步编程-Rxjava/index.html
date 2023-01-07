@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在 Android 异步编程-回调 中我们已经介绍了如何通过回调设计异步接口。相比起使用回调设计异步接口，RxJava 完成了一些异步通用逻辑的抽象，使用它解决异步问题能让我们更专注于业务逻辑本身。 设计异步接口同步的接口转换成通过 RxJava 来实现的异步接口有一些通用的原则，并且 RxJava 库本身已经提供了一些函数用于帮助我们将原本同步设计的接口迁移至用 RxJava 实现的异步接口：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android 异步编程-RxJava">
+<meta property="og:url" content="https://blog.chrnie.com/2020/01/27/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-Rxjava/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="在 Android 异步编程-回调 中我们已经介绍了如何通过回调设计异步接口。相比起使用回调设计异步接口，RxJava 完成了一些异步通用逻辑的抽象，使用它解决异步问题能让我们更专注于业务逻辑本身。 设计异步接口同步的接口转换成通过 RxJava 来实现的异步接口有一些通用的原则，并且 RxJava 库本身已经提供了一些函数用于帮助我们将原本同步设计的接口迁移至用 RxJava 实现的异步接口：">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-01-27T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta property="article:tag" content="RxJava">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2020/01/27/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-Rxjava/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Android 异步编程-RxJava | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2020/01/27/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-Rxjava/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Android 异步编程-RxJava
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-01-27 00:00:00" itemprop="dateCreated datePublished" datetime="2020-01-27T00:00:00Z">2020-01-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在 <a href="/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/" title="Android 异步编程-回调">Android 异步编程-回调</a> 中我们已经介绍了如何通过回调设计异步接口。相比起使用回调设计异步接口，RxJava 完成了一些异步通用逻辑的抽象，使用它解决异步问题能让我们更专注于业务逻辑本身。</p>
+<h1 id="设计异步接口"><a href="#设计异步接口" class="headerlink" title="设计异步接口"></a>设计异步接口</h1><p>同步的接口转换成通过 RxJava 来实现的异步接口有一些通用的原则，并且 RxJava 库本身已经提供了一些函数用于帮助我们将原本同步设计的接口迁移至用 RxJava 实现的异步接口：</p>
+<ul>
+<li><p>没有返回值的函数变成返回值为 Completable 的函数，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 同步接口</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">()</span></span>&#123;</span><br><span class="line">  ...    </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步接口</span></span><br><span class="line"><span class="function">Completable <span class="title">fooAsync</span><span class="params">()</span></span>&#123;</span><br><span class="line">  <span class="keyword">return</span> Completable.fromAction(<span class="keyword">this</span>::foo) </span><br><span class="line">    .subscribeOn(...) <span class="comment">// 指定 foo() 的执行线程</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p>有返回值的函数变成返回值为 Single<T> 的函数，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 同步接口</span></span><br><span class="line"><span class="function">String <span class="title">getFoo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步接口</span></span><br><span class="line"><span class="function">Single&lt;String&gt; <span class="title">getFooAsync</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> Single.fromCallable(<span class="keyword">this</span>::getFoo)</span><br><span class="line">    .subscribeOn(...)  <span class="comment">// 指定 getFoo() 的执行线程</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p>注册值变化监听器、反注册值变化监听器的组合可以变成返回值为 Observable<T> 的函数，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 同步接口</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">addOnFooChangeListener</span><span class="params">(Listener listener)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">removeOnFooChangeListener</span><span class="params">(Listener listener)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步接口</span></span><br><span class="line"><span class="function">Observable&lt;String&gt; <span class="title">observeFoo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> Observable.create(emitter -&gt; &#123;</span><br><span class="line">    <span class="comment">// 值变化时调用 onNext 将最新值向下游传递</span></span><br><span class="line">    Listener l = emitter::onNext;  </span><br><span class="line">    <span class="comment">// 当 Disposable.dispose() 被调用时时移除监听器</span></span><br><span class="line">    emitter.setCancellable(() -&gt; removeOnFooChangeListener(l)); </span><br><span class="line">    <span class="comment">// 开始监听</span></span><br><span class="line">    addOnFooChangeListener(l); </span><br><span class="line">  &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>上面的示例中有一个地方值得注意，在 <code>fooAsync()</code> 和 <code>getFooAsync()</code> 中我都通过调用 <code>subscribeOn()</code> 切换了线程，而在 <code>observeFoo()</code> 中我却没有这么做，是因为作为实现方我明确的知道调用 <code>foo()</code> 和 <code>getFoo()</code> 是耗时操作，需要确保运行在一个更为理想的环境中（如果是计算密集行操作可以使用 <code>Schedulers.computation()</code>，如果是 IO 密集型操作可以使用 <code>Schedulers.io()</code>）；而 <code>addOnFooChangeListener()</code> 并不耗时，切换执行线程并不是一个必要操作。</p>
+<p>就如最开始所说的，实现方能非常明确的知道什么操作耗时什么操作不耗时，耗时的操作是什么原因引起的，能用最好的决策完成执行线程的调度。而接口的使用者也能非常方便的通过 <code>observeOn()</code> 函数切换自身想要的线程中执行。实现方和使用方完全解耦，不需要关心各自需要在什么样的线程中执行代码。</p>
+<h1 id="常用的操作符"><a href="#常用的操作符" class="headerlink" title="常用的操作符"></a>常用的操作符</h1><p>常用的异步逻辑已经被 RxJava 封装到了操作符中，所以必须要对操作符有一个大概的了解才能比较好的理解用 RxJava 写出的代码，学习操作符的方式主要有以下两种：</p>
+<ol>
+<li>阅读 <a target="_blank" rel="noopener" href="https://mcxiaoke.gitbooks.io/rxdocs/content/topics/Getting-Started.html">RxJava入门指南· ReactiveX文档中文翻译</a>，对所有的操作符有一个大概的认识。</li>
+<li>在代码中遇到有不知道的操作符，在 AndroidStudio 中利用 Quick Documentation 功能可以快速查看带有示意图的操作符文档。</li>
+</ol>
+<p>下面将介绍一些常用的操作符以及给出一些示例。</p>
+<h2 id="线程池"><a href="#线程池" class="headerlink" title="线程池"></a>线程池</h2><p>在 RxJava 中，将函数执行的线程环境抽象为 <code>Scheduler</code> 接口，并且默认已经提供了一套默认的实现。在 Android 开发中常用的实现有三个：</p>
+<ul>
+<li><code>AndroidSchedulers.mainThread()</code>：在主线程中执行</li>
+<li><code>Schedulers.computation()</code>：内部维护了一个固定线程数的线程池，用于执行计算密集型任务</li>
+<li><code>Schedulers.io()</code>：内部维护了一个可复用但没有上限的线程池，用于执行阻塞式 IO 任务</li>
+</ul>
+<h2 id="切换线程"><a href="#切换线程" class="headerlink" title="切换线程"></a>切换线程</h2><ul>
+<li><p><code>subscribeOn</code>：设置上游订阅逻辑的执行线程，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 除了 create 操作符外，fromAction、fromCallable、fromRunnable </span></span><br><span class="line"><span class="comment"> * 这些操作符入参的执行线程也受 subscribeOn 影响</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">Completable.create(emitter -&gt; &#123;</span><br><span class="line">  System.out.println(Thread.currentThread().getName());</span><br><span class="line">  emitter.onComplete();</span><br><span class="line">&#125;)</span><br><span class="line">  .subscribeOn(Schedulers.io())</span><br><span class="line">  .doOnSubscribe(d -&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .subscribeOn(Schedulers.computation())</span><br><span class="line">  .doOnSubscribe(d -&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .subscribe();</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 执行结果：</span></span><br><span class="line"><span class="comment"> * main</span></span><br><span class="line"><span class="comment"> * RxComputationThreadPool-1</span></span><br><span class="line"><span class="comment"> * RxCachedThreadScheduler-1</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure></li>
+<li><p><code>unsubscribeOn</code>：设置上游取消订阅逻辑的执行线程，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Disposable disposable = Completable.create(emitter -&gt;</span><br><span class="line">  emitter.setCancellable(() -&gt;</span><br><span class="line">    System.out.println(Thread.currentThread().getName())</span><br><span class="line">  )</span><br><span class="line">)</span><br><span class="line">  .unsubscribeOn(Schedulers.io())</span><br><span class="line">  .doOnDispose(() -&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .unsubscribeOn(Schedulers.computation())</span><br><span class="line">  .doOnDispose(() -&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .subscribe();</span><br><span class="line"></span><br><span class="line">disposable.dispose();</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 执行结果：</span></span><br><span class="line"><span class="comment"> * main</span></span><br><span class="line"><span class="comment"> * RxComputationThreadPool-1</span></span><br><span class="line"><span class="comment"> * RxCachedThreadScheduler-1</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure></li>
+<li><p><code>observeOn</code>：设置下游观察者的执行线程，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * map、filter、doOnXXX 这类操作符入参的执行线程受 observeOn 影响</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">Completable.complete()</span><br><span class="line">  .observeOn(Schedulers.io())</span><br><span class="line">  .doOnComplete(()-&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .observeOn(Schedulers.computation())</span><br><span class="line">  .doOnComplete(()-&gt; System.out.println(Thread.currentThread().getName()))</span><br><span class="line">  .subscribe(()-&gt; System.out.println(Thread.currentThread().getName()));</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 执行结果：</span></span><br><span class="line"><span class="comment"> * RxCachedThreadScheduler-1</span></span><br><span class="line"><span class="comment"> * RxComputationThreadPool-1</span></span><br><span class="line"><span class="comment"> * RxNewThreadScheduler-1</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="异步逻辑与同步逻辑组合"><a href="#异步逻辑与同步逻辑组合" class="headerlink" title="异步逻辑与同步逻辑组合"></a>异步逻辑与同步逻辑组合</h2><ul>
+<li><p><code>map</code>：通过当前值计算生成新的值，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 将所有值翻倍</span></span><br><span class="line">Observable.fromArray(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>)</span><br><span class="line">        .map(n -&gt; n * <span class="number">2</span>)</span><br><span class="line">        .subscribe(doubleN -&gt;&#123;</span><br><span class="line">           <span class="comment">// do something </span></span><br><span class="line">        &#125;);</span><br></pre></td></tr></table></figure></li>
+<li><p><code>filter</code>：过滤出符合条件的值，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 过滤出所有的奇数</span></span><br><span class="line">Observable.fromArray(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>)</span><br><span class="line">        .filter(n -&gt; n % <span class="number">2</span> != <span class="number">0</span>)</span><br><span class="line">        .subscribe(odd -&gt; &#123;</span><br><span class="line">						<span class="comment">// do something </span></span><br><span class="line">        &#125;);</span><br></pre></td></tr></table></figure></li>
+<li><p><code>doOn...</code>：在指定的生命周期执行相应的逻辑，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 在执行异步任务时弹出等待对话框</span></span><br><span class="line">doSomethingAsync()</span><br><span class="line">        .doOnSubscribe(ignore-&gt; showLoadingDialog())</span><br><span class="line">        .doOnTerminate(()-&gt; dismissLoadingDialog())</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="异步逻辑与异步逻辑组合"><a href="#异步逻辑与异步逻辑组合" class="headerlink" title="异步逻辑与异步逻辑组合"></a>异步逻辑与异步逻辑组合</h2><ul>
+<li><p><code>flatMap</code>：类似于 map，只不过计算生成新值是异步逻辑，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 加载图片后进行高斯模糊</span></span><br><span class="line">loadBitmapAsync()</span><br><span class="line">        .flatMap(bitmap -&gt; blurBitmapAsync(bitmap))</span><br></pre></td></tr></table></figure></li>
+<li><p><code>zip</code>：通过多个异步计算结果计算出新的值，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 同步逻辑</span></span><br><span class="line">Bitmap bitmap1 = loadBitmap1();</span><br><span class="line">Bitmap bitmap2 = loadBitmap2();</span><br><span class="line">Bitmap result = composeBitmap(bitmap1, bitmap2);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步逻辑</span></span><br><span class="line">Single.zip(</span><br><span class="line">        loadBitmap1Async(),</span><br><span class="line">        loadBitmap2Async(),</span><br><span class="line">        Pair::<span class="keyword">new</span></span><br><span class="line">)</span><br><span class="line">        .flatMap(bitmapPair -&gt; composeBitmapAsync(bitmapPair.first, bitmapPair.second))</span><br></pre></td></tr></table></figure></li>
+</ul>
+<ul>
+<li><p><code>merge/concat</code>：聚合多个异步计算结果，例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 先利用本地数据展示页面，等网络数据返回再做一次更新</span></span><br><span class="line">Single.concatEager(Arrays.asList(</span><br><span class="line">        loadFromLocalAsync(),</span><br><span class="line">        loadFromRemoteAsync()</span><br><span class="line">))</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="异步逻辑异常处理"><a href="#异步逻辑异常处理" class="headerlink" title="异步逻辑异常处理"></a>异步逻辑异常处理</h2><ul>
+<li><p><code>onErrorReturn\onErrorResumeNext</code>：可恢复异常执行异常恢复，例如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 同步异常处理逻辑</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">foo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> doSomethingMaybeThrow();</span><br><span class="line">    &#125;<span class="keyword">catch</span> (Throwable t)&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步异常处理逻辑</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> Single&lt;Integer&gt; <span class="title">fooAsync</span><span class="params">()</span></span>&#123;</span><br><span class="line">   <span class="keyword">return</span> Single.fromCallable(()-&gt; doSomethingMaybeThrow())</span><br><span class="line">           .subscribeOn(...)</span><br><span class="line">           .onErrorReturn(throwable -&gt; <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="实现登陆流程"><a href="#实现登陆流程" class="headerlink" title="实现登陆流程"></a>实现登陆流程</h1><p>接下来将用 RxJava 重新设计我们的登陆流程相关的接口并重新实现该业务流程。</p>
+<h2 id="接口设计"><a href="#接口设计" class="headerlink" title="接口设计"></a>接口设计</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">Completable <span class="title">loginAsync</span><span class="params">(String username, String password)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">SsoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">Single&lt;Token&gt; <span class="title">getTokenAsync</span><span class="params">(String username, String password)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ImService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">Completable <span class="title">login</span><span class="params">(Token token)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">UserInfoService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">Single&lt;UserInfo&gt; <span class="title">getUserInfoAsync</span><span class="params">(Token token)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="LoginService-实现"><a href="#LoginService-实现" class="headerlink" title="LoginService 实现"></a>LoginService 实现</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LoginServiceImpl</span> <span class="keyword">implements</span> <span class="title">LoginService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> SsoService ssoService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ImService imService;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> UserInfoService userInfoService;</span><br><span class="line"></span><br><span class="line">    LoginServiceImpl(</span><br><span class="line">      SsoService ssoService,</span><br><span class="line">      ImService imService,</span><br><span class="line">      UserInfoService userInfoService) &#123;</span><br><span class="line">        <span class="keyword">this</span>.ssoService = ssoService;</span><br><span class="line">        <span class="keyword">this</span>.imService = imService;</span><br><span class="line">        <span class="keyword">this</span>.userInfoService = userInfoService;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Completable <span class="title">loginAsync</span><span class="params">(String username, String password)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ssoService.getTokenAsync(username, password)</span><br><span class="line">                .flatMapCompletable(token -&gt; Completable.mergeArray(</span><br><span class="line">                        imService.login(token),</span><br><span class="line">                        userInfoService.getUserInfoAsync(token)</span><br><span class="line">                                .flatMapCompletable(<span class="keyword">this</span>::saveUserInfoAsync)</span><br><span class="line">                ))</span><br><span class="line">                .onErrorResumeNext(<span class="keyword">this</span>::handleLoginException);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> Completable <span class="title">saveUserInfoAsync</span><span class="params">(UserInfo userInfo)</span> </span>&#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> Completable <span class="title">handleLoginException</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">return</span> Completable.error(<span class="keyword">new</span> BusinessException());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，相比起利用回调实现的异步代码，代码量减少了很多，很多异步细节已经被封装到了操作符中，所以就需要大家对 RxJava 的操作符比较熟悉才能比较好的理解代码的含义，充分利用上 Android Studio 的 Quick Documentation 功能，相信理解操作符含义不是一件难事。</p>
+<h2 id="异步接口的使用"><a href="#异步接口的使用" class="headerlink" title="异步接口的使用"></a>异步接口的使用</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Disposable disposable = loginService.loginAsync(..., ...)</span><br><span class="line">        .observeOn(...)  <span class="comment">// 切换 subscribe 中代码执行线程</span></span><br><span class="line">        .subscribe(() -&gt; &#123;</span><br><span class="line">            hint user login success</span><br><span class="line">        &#125;, throwable -&gt; &#123;</span><br><span class="line">            hint user login failure</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">disposable.dispose(); <span class="comment">// 中断异步执行逻辑</span></span><br></pre></td></tr></table></figure>
+
+<p>对于使用者来说，可以通过调用 <code>observeOn()</code>  指定执行线程，在调用 <code>subscribe()</code> 后会返回一个 Disposable 对象，该对象就同在回调章节提到的 Cancelable 的作用一样，调用该对象的 <code>dispose()</code> 方法即可用于中断异步流程。不过 RxJava 没有将异步的生命周期控制封装进入链式 API 中，如果有大量需要取消的异步流程管理起来非常的麻烦，这时候推荐引入第三方库的扩展 API 来进行管理，目前我个人认为扩展 API 设计得比较优秀的是：<a target="_blank" rel="noopener" href="https://github.com/uber/AutoDispose">uber/AutoDispose</a>，有兴趣的同学可以自行学习。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p><strong>优点</strong>：</p>
+<ul>
+<li>链式的 API 设计，从源头上避免了地狱回调的产生。</li>
+<li>封装了线程切换的 API，使得切换代码执行线程更加简单方便。</li>
+<li>丰富的操作符封装了通用的异步概念，让核心逻辑清晰。</li>
+<li>可以作为 Java Stream API 在 Android 平台上的替代品。</li>
+</ul>
+<p><strong>缺点</strong>：</p>
+<ul>
+<li>相比起同步代码，需要熟悉 API 才能理解代码流程，有学习成本。</li>
+<li>每个操作符背后都需要新建一系列的小对象，有一定的性能开销。</li>
+<li>异步调用的生命周期控制没有封装进链式 API 中，需要通过第三方库来补足 。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2020/01/27/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-Rxjava/" title="Android 异步编程-RxJava">https://blog.chrnie.com/2020/01/27/Android-异步编程-Rxjava/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+              <a href="/tags/RxJava/" rel="tag"># RxJava</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/11/17/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%9B%9E%E8%B0%83/" rel="prev" title="Android 异步编程-回调">
+      <i class="fa fa-chevron-left"></i> Android 异步编程-回调
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/04/04/Android-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B-%E5%8D%8F%E7%A8%8B/" rel="next" title="Android 异步编程-协程">
+      Android 异步编程-协程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%BE%E8%AE%A1%E5%BC%82%E6%AD%A5%E6%8E%A5%E5%8F%A3"><span class="nav-number">1.</span> <span class="nav-text">设计异步接口</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E7%9A%84%E6%93%8D%E4%BD%9C%E7%AC%A6"><span class="nav-number">2.</span> <span class="nav-text">常用的操作符</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="nav-number">2.1.</span> <span class="nav-text">线程池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%87%E6%8D%A2%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">切换线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5%E9%80%BB%E8%BE%91%E4%B8%8E%E5%90%8C%E6%AD%A5%E9%80%BB%E8%BE%91%E7%BB%84%E5%90%88"><span class="nav-number">2.3.</span> <span class="nav-text">异步逻辑与同步逻辑组合</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5%E9%80%BB%E8%BE%91%E4%B8%8E%E5%BC%82%E6%AD%A5%E9%80%BB%E8%BE%91%E7%BB%84%E5%90%88"><span class="nav-number">2.4.</span> <span class="nav-text">异步逻辑与异步逻辑组合</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5%E9%80%BB%E8%BE%91%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="nav-number">2.5.</span> <span class="nav-text">异步逻辑异常处理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E7%99%BB%E9%99%86%E6%B5%81%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">实现登陆流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.1.</span> <span class="nav-text">接口设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LoginService-%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.2.</span> <span class="nav-text">LoginService 实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5%E6%8E%A5%E5%8F%A3%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">3.3.</span> <span class="nav-text">异步接口的使用</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '24e7f2c0d7b3894b1ef3460cfea2a901',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

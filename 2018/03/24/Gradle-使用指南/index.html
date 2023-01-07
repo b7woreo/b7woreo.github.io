@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="依赖版本管理使用 config.gradle 配置依赖当一个 project 中包含多个 module 的时候为了方便，可以在 project 根目录新建一个文件叫 config.gradle 专门用来管理依赖版本。示例如下：  1234567891011121314151617181920212223242526ext &amp;#123;    versionCode &#x3D; 1    versionNa">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gradle 使用指南">
+<meta property="og:url" content="https://blog.chrnie.com/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="依赖版本管理使用 config.gradle 配置依赖当一个 project 中包含多个 module 的时候为了方便，可以在 project 根目录新建一个文件叫 config.gradle 专门用来管理依赖版本。示例如下：  1234567891011121314151617181920212223242526ext &amp;#123;    versionCode &#x3D; 1    versionNa">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180324182300.jpg">
+<meta property="article:published_time" content="2018-03-24T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Gradle">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.chrnie.com/images/20180324182300.jpg">
+
+<link rel="canonical" href="https://blog.chrnie.com/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Gradle 使用指南 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Gradle 使用指南
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-03-24 00:00:00" itemprop="dateCreated datePublished" datetime="2018-03-24T00:00:00Z">2018-03-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="依赖版本管理"><a href="#依赖版本管理" class="headerlink" title="依赖版本管理"></a>依赖版本管理</h1><h2 id="使用-config-gradle-配置依赖"><a href="#使用-config-gradle-配置依赖" class="headerlink" title="使用 config.gradle 配置依赖"></a>使用 config.gradle 配置依赖</h2><p>当一个 project 中包含多个 module 的时候为了方便，可以在 <strong>project</strong> 根目录新建一个文件叫 <strong>config.gradle</strong> 专门用来管理依赖版本。示例如下： </p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">ext &#123;</span><br><span class="line">    versionCode = <span class="number">1</span></span><br><span class="line">    versionName = <span class="string">&quot;1.0.0&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">ext &#123;</span><br><span class="line">    buildToolsVersion = <span class="string">&quot;27.0.3&quot;</span></span><br><span class="line">    compileSdkVersion = <span class="number">27</span></span><br><span class="line">    minSdkVersion = <span class="number">14</span></span><br><span class="line">    targetSdkVersion = <span class="number">27</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> kotlin_version = <span class="string">&quot;1.2.30&quot;</span></span><br><span class="line"></span><br><span class="line">ext.plugin = [</span><br><span class="line">        <span class="string">&quot;android&quot;</span>      : <span class="string">&quot;com.android.tools.build:gradle:3.0.1&quot;</span>,</span><br><span class="line">        <span class="string">&quot;kotlin&quot;</span>       : <span class="string">&quot;org.jetbrains.kotlin:kotlin-gradle-plugin:$&#123;kotlin_version&#125;&quot;</span>,</span><br><span class="line">        <span class="string">&quot;bintray&quot;</span>      : <span class="string">&quot;com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3&quot;</span>,</span><br><span class="line">        <span class="string">&quot;android-maven&quot;</span>: <span class="string">&quot;com.github.dcendents:android-maven-gradle-plugin:1.5&quot;</span>,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">ext.lib = [</span><br><span class="line">        <span class="string">&quot;kotlin-stdlib-jre7&quot;</span>: <span class="string">&quot;org.jetbrains.kotlin:kotlin-stdlib-jre7:$&#123;kotlin_version&#125;&quot;</span>,</span><br><span class="line">        <span class="string">&quot;recyclerview-v7&quot;</span>   : <span class="string">&quot;com.android.support:recyclerview-v7:27.0.2&quot;</span>,</span><br><span class="line">        <span class="string">&quot;test-runner&quot;</span>       : <span class="string">&quot;com.android.support.test:runner:0.5&quot;</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<h2 id="修改-project-目录下的-build-gradle"><a href="#修改-project-目录下的-build-gradle" class="headerlink" title="修改 project 目录下的 build.gradle"></a>修改 project 目录下的 build.gradle</h2><p>在 <strong>project</strong> 的 <strong>build.gradle</strong> 中引用：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">buildscript &#123;</span><br><span class="line">    apply <span class="attr">from:</span> <span class="string">&#x27;./config.gradle&#x27;</span></span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>然后 <strong>project</strong> 中的依赖统一这样配置：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">buildscript &#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    dependencies &#123;</span><br><span class="line">        classpath rootProject.plugin[<span class="string">&quot;android&quot;</span>]</span><br><span class="line">        classpath rootProject.plugin[<span class="string">&quot;kotlin&quot;</span>]</span><br><span class="line">        classpath rootProject.plugin[<span class="string">&quot;bintray&quot;</span>]</span><br><span class="line">        classpath rootProject.plugin[<span class="string">&quot;android-maven&quot;</span>]</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h2 id="修改-module-目录下的-build-gradle"><a href="#修改-module-目录下的-build-gradle" class="headerlink" title="修改 module 目录下的 build.gradle"></a>修改 module 目录下的 build.gradle</h2><p>在 <strong>module</strong> 中的依赖统一这样配置：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"></span><br><span class="line">android &#123;</span><br><span class="line">    compileSdkVersion rootProject.compileSdkVersion</span><br><span class="line">    buildToolsVersion rootProject.buildToolsVersion</span><br><span class="line"></span><br><span class="line">    defaultConfig &#123;</span><br><span class="line">        minSdkVersion rootProject.minSdkVersion</span><br><span class="line">        targetSdkVersion rootProject.targetSdkVersion</span><br><span class="line">        versionCode rootProject.versionCode</span><br><span class="line">        versionName rootProject.versionName</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">    implementation rootProject.lib[<span class="string">&quot;kotlin-stdlib-jre7&quot;</span>]</span><br><span class="line">    implementation rootProject.lib[<span class="string">&quot;recyclerview-v7&quot;</span>]</span><br><span class="line">    androidTestImplementation rootProject.lib[<span class="string">&quot;test-runner&quot;</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="把配置文件托管在服务器上"><a href="#把配置文件托管在服务器上" class="headerlink" title="把配置文件托管在服务器上"></a>把配置文件托管在服务器上</h2><p>我上面写的是把配置文件放在本地的，有需求的话可以将 <strong>config.gradle</strong> 文件以静态文件的方式在服务器上发布，即可在多个不同的 <strong>project</strong> 使用同一份配置。例如将配置文件上传到 Github 后，在该文件的浏览页面获取 url：</p>
+<p><img src="/images/20180324182300.jpg"></p>
+<p>把 <strong>project</strong> 的 <strong>build.config</strong> 中引用语句改为：<code>apply from: &#39;your/url&#39;</code> 即可。</p>
+<h1 id="Gradle-下载缓慢"><a href="#Gradle-下载缓慢" class="headerlink" title="Gradle 下载缓慢"></a>Gradle 下载缓慢</h1><p>一般情况下不直接使用本地 Gradle 而是使用Gradle wrapper，这样的好处是在修改 Gradle 版本时，只需要修改项目根目录下的gradle.properties文件中的distributionUrl即可。当我指定Gradle的版本为4.0时，gradle.properties内容如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">distributionBase&#x3D;GRADLE_USER_HOME</span><br><span class="line">distributionPath&#x3D;wrapper&#x2F;dists</span><br><span class="line">zipStoreBase&#x3D;GRADLE_USER_HOME</span><br><span class="line">zipStorePath&#x3D;wrapper&#x2F;dists</span><br><span class="line">distributionUrl&#x3D;https\:&#x2F;&#x2F;services.gradle.org&#x2F;distributions&#x2F;gradle-4.0-all.zip</span><br></pre></td></tr></table></figure>
+<p>然而由于网络的原因，导致直接通过</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https\:&#x2F;&#x2F;services.gradle.org&#x2F;distributions&#x2F;gradle-4.0-all.zip</span><br></pre></td></tr></table></figure>
+<p>下载 <strong>gradle-4.0-all.zip</strong> 十分缓慢。其实我们可以利用百度云等离线下载工具帮助完成下载，下面以下载 <strong>gradle-4.0-all.zip</strong> 举例:</p>
+<h2 id="第一步"><a href="#第一步" class="headerlink" title="第一步"></a>第一步</h2><p>使用下载工具下载 distributionUrl 链接内容。</p>
+<h2 id="第二步"><a href="#第二步" class="headerlink" title="第二步"></a>第二步</h2><p>使用 Terminal 执行任意 gradlew 命令或用 AndroidStudio 打开项目触发 gradle 的下载，此时在 .gradle\wrapper 文件夹中会出现对应版本号的文件夹，在这个文件夹里会有一个哈希值命名的文件夹。例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.gradle\wrapper\dists\gradle-4.0-all\ac27o8rbd0ic8ih41or9l32mv</span><br></pre></td></tr></table></figure>
+<p>在出现这些文件夹之后终止 gradle 的下载。</p>
+<h2 id="第三步"><a href="#第三步" class="headerlink" title="第三步"></a>第三步</h2><p>清空哈希值命名的文件夹中的所有内容，把事先下载好的 gradle-4.0-all.zip 放入其中。</p>
+<h2 id="第四步"><a href="#第四步" class="headerlink" title="第四步"></a>第四步</h2><p>再次执行gradlew命令或用AndroidStudio打开项目，就会发现跳过了下载过程。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/" title="Gradle 使用指南">https://blog.chrnie.com/2018/03/24/Gradle-使用指南/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Gradle/" rel="tag"># Gradle</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/" rel="prev" title="使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting">
+      <i class="fa fa-chevron-left"></i> 使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/03/25/%E6%B7%B1%E5%85%A5%E6%8E%A2%E7%B4%A2-fitsSystemWindows/" rel="next" title="深入探索 fitsSystemWindows">
+      深入探索 fitsSystemWindows <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BE%9D%E8%B5%96%E7%89%88%E6%9C%AC%E7%AE%A1%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">依赖版本管理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-config-gradle-%E9%85%8D%E7%BD%AE%E4%BE%9D%E8%B5%96"><span class="nav-number">1.1.</span> <span class="nav-text">使用 config.gradle 配置依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9-project-%E7%9B%AE%E5%BD%95%E4%B8%8B%E7%9A%84-build-gradle"><span class="nav-number">1.2.</span> <span class="nav-text">修改 project 目录下的 build.gradle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9-module-%E7%9B%AE%E5%BD%95%E4%B8%8B%E7%9A%84-build-gradle"><span class="nav-number">1.3.</span> <span class="nav-text">修改 module 目录下的 build.gradle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8A%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%89%98%E7%AE%A1%E5%9C%A8%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A"><span class="nav-number">1.4.</span> <span class="nav-text">把配置文件托管在服务器上</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Gradle-%E4%B8%8B%E8%BD%BD%E7%BC%93%E6%85%A2"><span class="nav-number">2.</span> <span class="nav-text">Gradle 下载缓慢</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5"><span class="nav-number">2.1.</span> <span class="nav-text">第一步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5"><span class="nav-number">2.2.</span> <span class="nav-text">第二步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%89%E6%AD%A5"><span class="nav-number">2.3.</span> <span class="nav-text">第三步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E5%9B%9B%E6%AD%A5"><span class="nav-number">2.4.</span> <span class="nav-text">第四步</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '390adbf1ea0b4c160987c0e1d261cdea',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

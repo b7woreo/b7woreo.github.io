@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="本文已过时，不再推荐使用 maven 插件发布产物，推荐使用 maven-publish 插件。 参考资料：Maven Publish Plugin使用 Maven Publish 插件  在 Android 开发中，说到 maven 仓库大家一定都不陌生，每当我们需要使用第三方的库的时候，最方便的添加依赖的方法如下：  implementation “io.reactivex.rxjava2:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gradle 打包上传到 maven 仓库小记">
+<meta property="og:url" content="https://blog.chrnie.com/2019/02/18/Gradle-%E6%89%93%E5%8C%85%E4%B8%8A%E4%BC%A0%E5%88%B0-maven-%E4%BB%93%E5%BA%93%E5%B0%8F%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="本文已过时，不再推荐使用 maven 插件发布产物，推荐使用 maven-publish 插件。 参考资料：Maven Publish Plugin使用 Maven Publish 插件  在 Android 开发中，说到 maven 仓库大家一定都不陌生，每当我们需要使用第三方的库的时候，最方便的添加依赖的方法如下：  implementation “io.reactivex.rxjava2:">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-02-18T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Gradle">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2019/02/18/Gradle-%E6%89%93%E5%8C%85%E4%B8%8A%E4%BC%A0%E5%88%B0-maven-%E4%BB%93%E5%BA%93%E5%B0%8F%E8%AE%B0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Gradle 打包上传到 maven 仓库小记 | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2019/02/18/Gradle-%E6%89%93%E5%8C%85%E4%B8%8A%E4%BC%A0%E5%88%B0-maven-%E4%BB%93%E5%BA%93%E5%B0%8F%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Gradle 打包上传到 maven 仓库小记
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2019-02-18 00:00:00" itemprop="dateCreated datePublished" datetime="2019-02-18T00:00:00Z">2019-02-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>本文已过时，不再推荐使用 maven 插件发布产物，推荐使用 maven-publish 插件。</p>
+<h1 id="参考资料："><a href="#参考资料：" class="headerlink" title="参考资料："></a>参考资料：</h1><p><a target="_blank" rel="noopener" href="https://docs.gradle.org/current/userguide/publishing_maven.html">Maven Publish Plugin</a><br><a target="_blank" rel="noopener" href="https://developer.android.com/studio/build/maven-publish-plugin?hl=zh-cn">使用 Maven Publish 插件</a></p>
+</blockquote>
+<p>在 Android 开发中，说到 maven 仓库大家一定都不陌生，每当我们需要使用第三方的库的时候，最方便的添加依赖的方法如下：</p>
+<blockquote>
+<p>implementation “io.reactivex.rxjava2:rxjava:2.x.y”  </p>
+</blockquote>
+<p>只需在 dependences 代码块中添加一行代码，gradle 脚本便会自动从配置的 maven 仓库（Android 默认配置为 JCenter）中下载相应的依赖。<br>本文将介绍如何打包上传我们自己写的库代码，也能像上面一样方便的进行引用。</p>
+<h1 id="上传至本地仓库"><a href="#上传至本地仓库" class="headerlink" title="上传至本地仓库"></a>上传至本地仓库</h1><p>首先，在 build.gradle 中我们需要添加 maven 插件，maven 插件会为我们添加一个 install 任务，该任务可以自动生成 pom 配置并打包上传至本地 maven 仓库（默认路径：%HOME/.m2）。<br>依赖描述主要由三部分组成：groupId、artifactId、version。用上文提到的 RxJava 举例的话：groupId 是 “io.reactivex.rxjava2”，artifactId 是 “rxjava”，version 是 “2.x.y”。<br>于是为了能正确引用到依赖，我们需要正确的配置上面三个参数，下面将通过一个 Java 库来演示，在 build.gradle 文件中添加如下代码：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">apply <span class="attr">plugin:</span> <span class="string">&#x27;maven&#x27;</span></span><br><span class="line"></span><br><span class="line">install &#123;</span><br><span class="line">    repositories.mavenInstaller&#123;</span><br><span class="line">        pom.groupId = <span class="string">&#x27;com.chrnie&#x27;</span></span><br><span class="line">        pom.artifactId = <span class="string">&#x27;java-library&#x27;</span></span><br><span class="line">        pom.version = <span class="string">&#x27;1.0.0-SNAPSHOT&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后运行命令 <code>gradle install</code> 命令，即可在 build/pom 目录下看到插件生成的 pom 描述文件：pom-default.xml，在 build/libs 目录下看到将被打包上传的 jar 文件，并且还在本地 maven 仓库中创建对应的文件。于是，在其它的本地项目中，可以通过添加本地 maven 仓库的配置引用本地 maven 中的库文件。示例代码片段如下：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">repositories &#123;</span><br><span class="line">    mavenLocal() </span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">implementation <span class="string">&#x27;com.chrnie:java-library:1.0.0-SNAPSHOT&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是，pom 的 groupId、artifactId、version 如果没有配置，那么将依次使用 project.group、project.name、project.version 作为默认值。<br>除了上面提到的三个值之外，还有其它许多的参数可以进行配置，例如很多开源项目还会配置 license、developer、scm 等信息，示例模板如下：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">pom &#123;</span><br><span class="line">    groupId = <span class="string">&#x27;&#x27;</span></span><br><span class="line">    artifactId = <span class="string">&#x27;&#x27;</span></span><br><span class="line">    version = <span class="string">&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line">    project &#123;</span><br><span class="line">        name <span class="string">&#x27;&#x27;</span></span><br><span class="line">        description <span class="string">&#x27;&#x27;</span></span><br><span class="line">        url <span class="string">&#x27;&#x27;</span></span><br><span class="line">        licenses &#123;</span><br><span class="line">            license &#123;</span><br><span class="line">                name <span class="string">&#x27;&#x27;</span></span><br><span class="line">                url <span class="string">&#x27;&#x27;</span></span><br><span class="line">                distribution <span class="string">&#x27;&#x27;</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        developers &#123;</span><br><span class="line">            developer &#123;</span><br><span class="line">                id <span class="string">&#x27;&#x27;</span></span><br><span class="line">                name <span class="string">&#x27;&#x27;</span></span><br><span class="line">                email <span class="string">&#x27;&#x27;</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        scm &#123;</span><br><span class="line">            connection <span class="string">&#x27;&#x27;</span></span><br><span class="line">            url <span class="string">&#x27;&#x27;</span></span><br><span class="line">            developerConnection <span class="string">&#x27;&#x27;</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关于 pom 具体可以进行哪些配置，可以参考文档：<a target="_blank" rel="noopener" href="https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/maven/MavenPom.html">MavenPom</a>。<br>由于 maven 插件的 install 任务与 Android 插件不兼容，如果在使用 Android 插件后想使用 install 命令，需要使用第三方的插件 <a target="_blank" rel="noopener" href="https://github.com/dcendents/android-maven-gradle-plugin">android-maven-gradle-plugin</a> 代替 maven 插件，具体配置与 maven 插件相同，仅仅是为了与 Android 插件兼容，同时 pom 配置中默认的 packaging 值由 jar 变为 aar。</p>
+<h1 id="打包更多的文件"><a href="#打包更多的文件" class="headerlink" title="打包更多的文件"></a>打包更多的文件</h1><p>默认情况下，插件只会打包工程生成的直接产物，例如 Java 工程生成的 jar 文件，Android 工程生成的 aar 文件。为了方便开发，IDE 还可以自动解析依赖对应的 *-source.jar 和 *-javadoc.jar 文件以自动匹配源码和文档。例如可以在 Java 工程中添加如下配置自动生成对应的源码和文档打包文件：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">task sourcesJar(<span class="attr">type:</span> Jar, <span class="attr">dependsOn:</span> classes) &#123;</span><br><span class="line">    classifier = <span class="string">&quot;sources&quot;</span></span><br><span class="line">    from sourceSets.main.allSource</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">task javadocJar(<span class="attr">type:</span> Jar, <span class="attr">dependsOn:</span> javadoc) &#123;</span><br><span class="line">    classifier = <span class="string">&quot;javadoc&quot;</span></span><br><span class="line">    from javadoc.destinationDir</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>和通过 artifacts 代码块配置需要额外打包的文件项：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">artifacts &#123;</span><br><span class="line">    archives sourcesJar</span><br><span class="line">    archives javadocJar</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这样就可以自动生成带有相应源码和文档的打包文件了，运行 <code>gradle install</code> 命令后可以在 build/libs 目录下查看所有的将要被打包的文件。</p>
+<h1 id="上传至远程仓库"><a href="#上传至远程仓库" class="headerlink" title="上传至远程仓库"></a>上传至远程仓库</h1><p>maven gradle 插件除了提供 install 任务外，还提供了 uploadArchives 任务用于打包上传至远程的仓库。配置方式与 install 任务类似，示例如下：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">uploadArchives &#123;</span><br><span class="line">    repositories &#123;</span><br><span class="line">        mavenDeployer &#123;</span><br><span class="line">            beforeDeployment &#123; MavenDeployment deployment -&gt; signing.signPom(deployment) &#125;</span><br><span class="line"></span><br><span class="line">            repository(<span class="attr">url:</span> <span class="string">&quot;url/to/remote/release/maven&quot;</span>) &#123;</span><br><span class="line">                authentication(<span class="attr">userName:</span> <span class="string">&#x27;user_name&#x27;</span>, <span class="attr">password:</span> <span class="string">&#x27;password&#x27;</span>)</span><br><span class="line">            &#125;</span><br><span class="line">            snapshotRepository(<span class="attr">url:</span> <span class="string">&quot;url/to/remote/snapshot/maven&quot;</span>) &#123;</span><br><span class="line">                authentication(<span class="attr">userName:</span> <span class="string">&#x27;user_name&#x27;</span>, <span class="attr">password:</span> <span class="string">&#x27;password&#x27;</span>)</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            pom&#123;</span><br><span class="line">                ...</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>与 install 任务区别主要在可以通过 repository 代码块配置远程 release 版本仓库的信息和通过 snapshotRepository 代码块配置远程 snapshot 版本仓库的信息。值得注意的是，如果想要上传 release 版本至 mavenCenter 仓库，需要对打包的文件进行签名，可以添加 signing 配置并在 mavenDeployer.beforeDeployment 中调用 siging 对打包文件进行签名：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">signing &#123;</span><br><span class="line">    required &#123; <span class="comment">/* isRelease */</span> &#125;</span><br><span class="line">    sign configurations.archives</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="上传至-JCenter"><a href="#上传至-JCenter" class="headerlink" title="上传至 JCenter"></a>上传至 JCenter</h1><p>除了 mavenCenter 外，还可以选择将包上传至 JCenter 仓库。目前 Android 创建的项目模板中 JCenter 已经替代 mavenCenter 成为了默认的选择。上传至 JCenter 需要使用 bintray 官方提供的 gradle 插件：<a target="_blank" rel="noopener" href="https://github.com/bintray/gradle-bintray-plugin">gradle-bintray-plugin</a>，然后就是在 build.gradle 中添加如下配置：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">bintray &#123;   </span><br><span class="line">    user = <span class="string">&#x27;bintray_user&#x27;</span></span><br><span class="line">    key = <span class="string">&#x27;bintray_api_key&#x27;</span></span><br><span class="line">    pkg &#123;</span><br><span class="line">        repo = <span class="string">&#x27;&#x27;</span></span><br><span class="line">        name = <span class="string">&#x27;&#x27;</span></span><br><span class="line">        licenses = [<span class="string">&#x27;&#x27;</span>]</span><br><span class="line">        vcsUrl = <span class="string">&#x27;&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>示例中提及到的参数都是必填项，并且 bintray 插件的任务依赖于 install 任务，所以还需要按照上文介绍的配置好 install 任务参数。需要注意的是，bintray 插件在上传时会使用 project.group、project.version 值和 pom 配置中的 groupId、version 值做校验，所以建议不在 pom 代码块中配置 groupId、version 参数，而是统一配置 project.group、project.version 参数。而且 version 不能带有类似 SNAPSHOT 字样，只能是纯数字和点组成，否则会上传失败。<br>因为一般情况下，一个多 module 工程所有的子 module 的 group 和 version 值都是统一的，这里有个小技巧，可以在 rootProject 中配置一次即可：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">subprojects &#123;</span><br><span class="line">    version = <span class="string">&#x27;project_version&#x27;</span></span><br><span class="line">    group = <span class="string">&#x27;project_group&#x27;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在完成配置后，即可通过调用 <code>gradle bintrayUpload</code> 执行打包上传的任务。</p>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p><a target="_blank" rel="noopener" href="https://docs.gradle.org/current/userguide/maven_plugin.html">Maven Plugin</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2019/02/18/Gradle-%E6%89%93%E5%8C%85%E4%B8%8A%E4%BC%A0%E5%88%B0-maven-%E4%BB%93%E5%BA%93%E5%B0%8F%E8%AE%B0/" title="Gradle 打包上传到 maven 仓库小记">https://blog.chrnie.com/2019/02/18/Gradle-打包上传到-maven-仓库小记/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Gradle/" rel="tag"># Gradle</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/12/02/Kotlin-%E5%8D%8F%E7%A8%8B%E4%B9%8B-suspend-function/" rel="prev" title="Kotlin 协程之 suspend function">
+      <i class="fa fa-chevron-left"></i> Kotlin 协程之 suspend function
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2019/03/30/%E4%BD%BF%E7%94%A8-jmh-%E5%81%9A%E5%9F%BA%E5%87%86%E6%B5%8B%E8%AF%95/" rel="next" title="使用 jmh 做基准测试（benchmarks）">
+      使用 jmh 做基准测试（benchmarks） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99%EF%BC%9A"><span class="nav-number">1.</span> <span class="nav-text">参考资料：</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%8A%E4%BC%A0%E8%87%B3%E6%9C%AC%E5%9C%B0%E4%BB%93%E5%BA%93"><span class="nav-number">2.</span> <span class="nav-text">上传至本地仓库</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%89%93%E5%8C%85%E6%9B%B4%E5%A4%9A%E7%9A%84%E6%96%87%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">打包更多的文件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%8A%E4%BC%A0%E8%87%B3%E8%BF%9C%E7%A8%8B%E4%BB%93%E5%BA%93"><span class="nav-number">4.</span> <span class="nav-text">上传至远程仓库</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%8A%E4%BC%A0%E8%87%B3-JCenter"><span class="nav-number">5.</span> <span class="nav-text">上传至 JCenter</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : 'ebf299756057812547a009a2dc781b7b',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>

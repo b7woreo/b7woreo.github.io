@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="先说下前因吧，原本博客是托管在 Github Pages 上的，但是一直觉得速度不理想、打开得比较慢，但是又找不到合适的替代品故放任不理。无意中发现 Firebase 提供了静态资源托管服务，而且居然是国内可用的，经过测试速度很可观（反正感觉是比 Github Pages 要快）。于是就开始着手博客迁移的工作，本文便是这次折腾经过的总结。在正式开始之前，先介绍一遍涉及到的东西：0. Hexo：静态">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting">
+<meta property="og:url" content="https://blog.chrnie.com/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="先说下前因吧，原本博客是托管在 Github Pages 上的，但是一直觉得速度不理想、打开得比较慢，但是又找不到合适的替代品故放任不理。无意中发现 Firebase 提供了静态资源托管服务，而且居然是国内可用的，经过测试速度很可观（反正感觉是比 Github Pages 要快）。于是就开始着手博客迁移的工作，本文便是这次折腾经过的总结。在正式开始之前，先介绍一遍涉及到的东西：0. Hexo：静态">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180308231147.png">
+<meta property="og:image" content="https://blog.chrnie.com/images/20180308235926.png">
+<meta property="article:published_time" content="2018-03-08T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-01-07T06:58:27.016Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="CI">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.chrnie.com/images/20180308231147.png">
+
+<link rel="canonical" href="https://blog.chrnie.com/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?50dec52e0c91f0c0837fd04937a93e3f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-03-08 00:00:00" itemprop="dateCreated datePublished" datetime="2018-03-08T00:00:00Z">2018-03-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-01-07 06:58:27" itemprop="dateModified" datetime="2023-01-07T06:58:27Z">2023-01-07</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>先说下前因吧，原本博客是托管在 Github Pages 上的，但是一直觉得速度不理想、打开得比较慢，但是又找不到合适的替代品故放任不理。无意中发现 Firebase 提供了静态资源托管服务，而且居然是国内可用的，经过测试速度很可观（反正感觉是比 Github Pages 要快）。于是就开始着手博客迁移的工作，本文便是这次折腾经过的总结。<br>在正式开始之前，先介绍一遍涉及到的东西：<br>0. Hexo：静态博客生成工具<br>0. Github：托管博客源码<br>0. Travis CI：持续集成工具<br>0. Firebase Hosting：静态资源托管服务</p>
+<h1 id="搭建博客"><a href="#搭建博客" class="headerlink" title="搭建博客"></a>搭建博客</h1><p>市面上有很多搭建博客的工具，不过我独爱 Hexo Next 主题，故选择 Hexo 作为搭建工具。Hexo 主要是通过预设的主题样式和编写好的 MarkDown 生成静态的网站。而 Github 也提供了静态网站的托管服务，所以也造就了 Hexo 这类生成静态博客的工具有众多的使用人数。<br>安装 Hexo 步骤很简单，官方也提供了中文文档，需要注意的是 Hexo 依赖 Git 和 Node.js。核心步骤：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装 hexo</span></span><br><span class="line">npm install hexo-cli -g</span><br><span class="line"></span><br><span class="line"><span class="comment"># 初始化名为 blog 的文件夹用于存放生成静态网站用的源码</span></span><br><span class="line">hexo init blog</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 npm 自动安装依赖</span></span><br><span class="line"><span class="built_in">cd</span> blog</span><br><span class="line">npm install</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装本地服务器，用于在本地预览博客效果</span></span><br><span class="line">npm install hexo-server --save</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动本地服务器，即可在浏览器中输入 http://localhost:4000 预览效果</span></span><br><span class="line">hexo server</span><br></pre></td></tr></table></figure>
+
+<h1 id="博客网站源码托管"><a href="#博客网站源码托管" class="headerlink" title="博客网站源码托管"></a>博客网站源码托管</h1><p>因为博客网站是通过上文中 <strong>blog</strong> 文件夹中的文件生成的，意味着只要源码在，随时随地都能重新生成一个一摸一样的静态网站并可以重新部署到任意的地方，所以需要好好保管这些文件。和代码一样，这里选择使用 Git 管理代码版本，方便进行回滚等一系列操作，并选择 Github 作为远程仓库。通过 Git 将源码保存到 Github 中操作简单，并且不是本文重点故略过。</p>
+<h1 id="自动化部署"><a href="#自动化部署" class="headerlink" title="自动化部署"></a>自动化部署</h1><p>在之前把博客托管在 Github Pages 时并没有使用 Travis CI 来完成自动化部署任务，因为从本地把生成好的博客发布到 Github Pages 中十分的方便，只需要一行命令即可搞定。但是使用 Firebase Hosting 就麻烦了许多，需要使用 Firebase CLI 来完成发布，而且使用 Firebase CLI 是需要科学上网的，对于在国内来说非常的不方便，所以不如直接通过 CI 来完成发布要方便许多。选择 Travis CI 的主要原因是用于 Github 中的开源仓库是免费使用的。<br>首先在 <a target="_blank" rel="noopener" href="https://travis-ci.org/">Travis CI</a> 中使用托管了源码的 Github 账号登陆，勾选对应仓库名左边的选择框并开启服务，如图所示：</p>
+<p><img src="/images/20180308231147.png"></p>
+<p>然后就是需要在源码文件夹的根目录（上文中也就是 blog 文件夹）添加 <strong>.travis.yml</strong> 文件，该文件中主要描述 CI 的任务。示例如下：</p>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 执行命令需要 sudo 命令</span></span><br><span class="line"><span class="attr">sudo:</span> <span class="string">required</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Travis CI 预置了多种常用语言的配置，这里 Hexo 需要使用的是 Node.js</span></span><br><span class="line"><span class="attr">language:</span> <span class="string">node_js</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 设置需要安装的 Node.js 版本号</span></span><br><span class="line"><span class="attr">node_js:</span> <span class="string">&quot;8&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行命令生成静态博客网站</span></span><br><span class="line"><span class="attr">script:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">hexo</span> <span class="string">g</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 接下来是部署到 Firebase Hosting 的配置信息</span></span><br><span class="line"><span class="attr">deploy:</span></span><br><span class="line">  <span class="comment"># 默认在部署前会把整个目录恢复到刚拷贝时的状态，但是我们需要上面生成好的文件，故跳过该阶段</span></span><br><span class="line">  <span class="attr">skip_cleanup:</span> <span class="literal">true</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># Travis CI 预置了发布到 firebase 的配置</span></span><br><span class="line">  <span class="attr">provider:</span> <span class="string">firebase</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment"># 配置 Firebase 的用户验证和工程信息，下文会提到</span></span><br><span class="line">  <span class="attr">token:</span></span><br><span class="line">    <span class="attr">secure:</span> <span class="string">$FIREBASE_TOKEN</span></span><br><span class="line">  <span class="attr">project:</span> <span class="string">$FIREBASE_PROJECT</span></span><br></pre></td></tr></table></figure>
+<p>有了 .travis.yml 文件后，我们只需要通过 </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git push</span><br></pre></td></tr></table></figure>
+<p>命令把代码推送到 Github 上，Travis CI 便会检测到有变更且自动执行上面的任务。现在我们还差的就是把上面用的环境变量  <code>FIREBASE_TOKEN</code> 和 <code>FIREBASE_PROJECT</code> 补充上。环境变量在 Travis CI 控制台中对应项目的设置页面中添加，添加后如图所示：<br><img src="/images/20180308235926.png"></p>
+<p>而他们的值通过一下步骤获取：<br>先到 <a href="firebase.google.com">Firebase</a> 申请一个工程，环境变量 FIREBASE_PROJECT 的值便是 <strong>项目 ID</strong>。<br>接下来需要在能科学上网的地方安装 Firebase CLI：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install -g firebase-tools</span><br></pre></td></tr></table></figure>
+<p>通过 <code>firebase login:ci</code> 命令登陆，成功登陆后便可获得环境变量 FIREBASE_TOKEN 的值。如果不是在本机登陆（例如通过 SSH 在远程服务器上进行操作的），可以通过<code>firebase login:ci --no-localhost</code> 命令完成登陆。填写了环境变量值之后，还需要在源码根目录下添加 <strong>firebase.json</strong> 文件配置基本的发布信息。示例：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;hosting&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;public&quot;</span>: <span class="string">&quot;public&quot;</span>,</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>hosting</strong> 代表我们使用的是 Hosting 服务，子节点 <strong>public</strong> 指定了需要托管的静态资源的目录，因为 Hexo 生成的文件默认在 public 文件夹中，故指定为该文件夹。<br>现在万事俱备了，只需要我们轻轻敲动键盘，把源码推送到 Github 上便大功告成了。待 CI 任务执行完成，便可以在 Firebase Hosting 指定的域名上访问我们的博客了。 </p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2018/03/08/%E4%BD%BF%E7%94%A8-Travis-CI-%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2-Hexo-%E7%94%9F%E6%88%90%E7%9A%84%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E5%88%B0-Firebase-Hosting/" title="使用 Travis CI 自动化部署 Hexo 生成的静态博客到 Firebase Hosting">https://blog.chrnie.com/2018/03/08/使用-Travis-CI-自动化部署-Hexo-生成的静态博客到-Firebase-Hosting/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CI/" rel="tag"># CI</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/09/16/FragmentPagerAdapter-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/" rel="prev" title="FragmentPagerAdapter 使用指南">
+      <i class="fa fa-chevron-left"></i> FragmentPagerAdapter 使用指南
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/03/24/Gradle-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97/" rel="next" title="Gradle 使用指南">
+      Gradle 使用指南 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%90%AD%E5%BB%BA%E5%8D%9A%E5%AE%A2"><span class="nav-number">1.</span> <span class="nav-text">搭建博客</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8D%9A%E5%AE%A2%E7%BD%91%E7%AB%99%E6%BA%90%E7%A0%81%E6%89%98%E7%AE%A1"><span class="nav-number">2.</span> <span class="nav-text">博客网站源码托管</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%87%AA%E5%8A%A8%E5%8C%96%E9%83%A8%E7%BD%B2"><span class="nav-number">3.</span> <span class="nav-text">自动化部署</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">26</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">粤ICP备2021023947号-1 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : '8447b19e9078e90ac4376b1c10af357b',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>
