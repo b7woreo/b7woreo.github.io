@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.chrnie.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":false,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="操作系统: macOS 13.3.1 flutter sdk: 3.7.12   准备工具下载和编译源码需要用到 gclient&#x2F;ninja, 它们包含在 depot_tools 工具集中.  通过 git 下载拷贝 depot_tools 仓库 1git clone https:&#x2F;&#x2F;chromium.googlesource.com&#x2F;chromium&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flutter Engine: 编译与调试 (Android)">
+<meta property="og:url" content="https://blog.chrnie.com/2023/05/13/Flutter-Engine:-%E7%BC%96%E8%AF%91%E4%B8%8E%E8%B0%83%E8%AF%95-(Android)/index.html">
+<meta property="og:site_name" content="Know it &amp; why">
+<meta property="og:description" content="操作系统: macOS 13.3.1 flutter sdk: 3.7.12   准备工具下载和编译源码需要用到 gclient&#x2F;ninja, 它们包含在 depot_tools 工具集中.  通过 git 下载拷贝 depot_tools 仓库 1git clone https:&#x2F;&#x2F;chromium.googlesource.com&#x2F;chromium&#x2F;">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-05-13T00:00:00.000Z">
+<meta property="article:modified_time" content="2023-06-08T15:45:34.842Z">
+<meta property="article:author" content="陈仁杰">
+<meta property="article:tag" content="Android">
+<meta property="article:tag" content="flutter">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://blog.chrnie.com/2023/05/13/Flutter-Engine:-%E7%BC%96%E8%AF%91%E4%B8%8E%E8%B0%83%E8%AF%95-(Android)/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Flutter Engine: 编译与调试 (Android) | Know it & why</title>
+  
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?b18fd7c4e0d67aa2c74c2020a3b56d7a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Know it & why</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">知其然也知其所以然</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.chrnie.com/2023/05/13/Flutter-Engine:-%E7%BC%96%E8%AF%91%E4%B8%8E%E8%B0%83%E8%AF%95-(Android)/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="陈仁杰">
+      <meta itemprop="description" content="Android Developer">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Know it & why">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Flutter Engine: 编译与调试 (Android)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-05-13 00:00:00" itemprop="dateCreated datePublished" datetime="2023-05-13T00:00:00Z">2023-05-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-06-08 15:45:34" itemprop="dateModified" datetime="2023-06-08T15:45:34Z">2023-06-08</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<ul>
+<li>操作系统: macOS 13.3.1</li>
+<li>flutter sdk: 3.7.12</li>
+</ul>
+</blockquote>
+<h1 id="准备工具"><a href="#准备工具" class="headerlink" title="准备工具"></a>准备工具</h1><p>下载和编译源码需要用到 <code>gclient</code>/<code>ninja</code>, 它们包含在 <a target="_blank" rel="noopener" href="https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html#_setting_up">depot_tools</a> 工具集中.</p>
+<ol>
+<li>通过 git 下载拷贝 depot_tools 仓库 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone https:&#x2F;&#x2F;chromium.googlesource.com&#x2F;chromium&#x2F;tools&#x2F;depot_tools.git</span><br></pre></td></tr></table></figure></li>
+<li>将 depot_tools 路径添加到 PATH 环境变量中, 便于后续直接使用 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PATH&#x3D;&#x2F;path&#x2F;to&#x2F;depot_tools:$PATH</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h1 id="下载源码"><a href="#下载源码" class="headerlink" title="下载源码"></a>下载源码</h1><h2 id="同步代码"><a href="#同步代码" class="headerlink" title="同步代码"></a>同步代码</h2><ol>
+<li>创建 engine 目录, 并在 engine 目录中添加 <code>.gclient</code> 文件: <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">solutions &#x3D; [</span><br><span class="line">  &#123;</span><br><span class="line">    &quot;managed&quot;: False,</span><br><span class="line">    &quot;name&quot;: &quot;src&#x2F;flutter&quot;,</span><br><span class="line">    &quot;url&quot;: &quot;https:&#x2F;&#x2F;github.com&#x2F;flutter&#x2F;engine.git&quot;,</span><br><span class="line">    &quot;custom_deps&quot;: &#123;&#125;,</span><br><span class="line">    &quot;deps_file&quot;: &quot;DEPS&quot;,</span><br><span class="line">    &quot;safesync_url&quot;: &quot;&quot;,</span><br><span class="line">  &#125;,</span><br><span class="line">]</span><br></pre></td></tr></table></figure></li>
+<li>执行 <code>gclinet sync</code> 命令, 等完同步完成.</li>
+</ol>
+<h2 id="切换分支"><a href="#切换分支" class="headerlink" title="切换分支"></a>切换分支</h2><p>一般情况下是要阅读和编译与 flutter sdk 关联的引擎代码.</p>
+<ol>
+<li>执行 <code>cat path/to/flutter/bin/internal/engine.version</code> 命令查看引擎 <code>git-hash</code>.</li>
+<li>进入 <code>src/flutter</code> 目录中, 执行 <code>git checkout &lt;git-hash&gt;</code>.</li>
+<li>执行 <code>gclient sync -D</code> 命令, 等待同步完成.</li>
+</ol>
+<h1 id="编译源码"><a href="#编译源码" class="headerlink" title="编译源码"></a>编译源码</h1><p>同步完的代码会保存在 <code>src/flutter</code> 目录中, 接下来的构建操作都会在 <code>src</code> 目录下进行. flutter 支持在多个平台上运行, 针对不同的平台会生成不同的产物.</p>
+<h2 id="生成构建文件"><a href="#生成构建文件" class="headerlink" title="生成构建文件"></a>生成构建文件</h2><p>在开始构建任务前, 需要通过 <code>gn</code> 命令生成构建前所需的文件. 以构建 android-arm 引擎为例, 需要准备 <strong>android-arm</strong> 和 <strong>host</strong> 的构建文件.</p>
+<ul>
+<li>android-arm: <code>./flutter/tools/gn --target-os android --android-cpu arm --runtime-mode debug --unoptimized --no-goma</code></li>
+<li>host: <code>./flutter/tools/gn --runtime-mode debug --unoptimized --no-goma</code></li>
+</ul>
+<p><strong>命令参数</strong>:</p>
+<ul>
+<li><code>target-os</code>: 指定目标平台, 支持 android,ios,mac,linux,fuchsia,wasm,win.</li>
+<li><code>android-cpu</code>: 目标平台为 android 时, 指定目标 abi. 支持 arm,x64,x86,arm64.</li>
+<li><code>runtime-mode</code>: 指定运行模式, 支持 debug,profile,release,jit_release.</li>
+<li><code>unoptimized</code>: 关闭优化, 提升构建速度, 在编译 release 产物时不要使用.</li>
+<li><code>no-goma</code>: <code>goma</code>是 Google 内部使用的分布式构建工具, 默认会启用该工具, 需要通过 <code>--no-goma</code> 禁用.</li>
+</ul>
+<h2 id="执行构建操作"><a href="#执行构建操作" class="headerlink" title="执行构建操作"></a>执行构建操作</h2><p>使用 <code>gn</code> 命令会在 <code>out</code> 目录下生成对应的构建文件, 接着使用 <code>ninja</code> 命令开始指定平台的构建任务.</p>
+<ul>
+<li>android-arm: <code>ninja -C out/android_debug_unopt</code></li>
+<li>host: <code>ninja -C out/host_debug_unopt</code></li>
+</ul>
+<h1 id="调试源码"><a href="#调试源码" class="headerlink" title="调试源码"></a>调试源码</h1><h2 id="代码跳转补全"><a href="#代码跳转补全" class="headerlink" title="代码跳转补全"></a>代码跳转补全</h2><p>推荐使用 vscode 进行代码阅读与编辑.</p>
+<h3 id="c"><a href="#c" class="headerlink" title="c++"></a>c++</h3><ol>
+<li>安装插件: <a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd">clangd</a>.</li>
+<li>把 <code>compile_commands.json</code> 添加到 <code>src/flutter</code> 目录下:  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ln -s ../out/android_debug_unopt/compile_commands.json .</span><br></pre></td></tr></table></figure></li>
+<li>用 vscode 打开 <code>src/flutter</code> 目录.</li>
+</ol>
+<h3 id="Java"><a href="#Java" class="headerlink" title="Java"></a>Java</h3><ol>
+<li>安装插件: <a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack">Extension Pack for Java</a>.</li>
+<li>android 相关的代码在 <code>shell/platform/android</code> 目录中, 在该目录下添加 <code>.vscode/settings.json</code> 文件配置依赖路径: <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;java.project.sourcePaths&quot;</span>: [</span><br><span class="line">    <span class="string">&quot;.&quot;</span></span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">&quot;java.project.referencedLibraries&quot;</span>: [</span><br><span class="line">    <span class="string">&quot;path/to/engine/src/third_party/android_embedding_dependencies/lib/*.jar&quot;</span>,</span><br><span class="line">    <span class="string">&quot;path/to/engine/src/third_party/android_tools/sdk/platforms/android-33/android.jar&quot;</span>,</span><br><span class="line">  ],</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li>用 vscode 打开 <code>shell/platform/android</code> 目录.</li>
+</ol>
+<h2 id="使用本地引擎"><a href="#使用本地引擎" class="headerlink" title="使用本地引擎"></a>使用本地引擎</h2><p>使用 <code>flutter</code> 命令时, 通过 <code>--target-platform</code> 和 <code>--local-engine</code> 参数可以指定使用本地编译的引擎, 以编译 apk 为例:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">flutter build apk \</span><br><span class="line">--debug \</span><br><span class="line">--target-platform=android-arm \</span><br><span class="line">--local-engine-src-path=path/to/engine/src \</span><br><span class="line">--local-engine=android_debug_unopt</span><br></pre></td></tr></table></figure>
+
+<h2 id="断点调试代码"><a href="#断点调试代码" class="headerlink" title="断点调试代码"></a>断点调试代码</h2><ol>
+<li>安装插件: <a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb">CodeLLDB</a>.</li>
+<li>在设备上运行待调试的应用.</li>
+<li>在设备中运行 <code>lldb-server</code>:<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">adb push path/to/lldb-server /data/<span class="built_in">local</span>/tmp</span><br><span class="line">adb shell run-as &lt;package-id&gt; sh -c <span class="string">&quot;cp -F /data/local/tmp/lldb-server /data/data/&lt;package-id&gt;/lldb-server&quot;</span></span><br><span class="line">adb shell run-as &lt;package-id&gt; sh -c <span class="string">&quot;/data/data/&lt;package-id&gt;/lldb-server platform --server --listen unix-abstract:///data/data/&lt;package-id&gt;/debug.socket&quot;</span></span><br></pre></td></tr></table></figure>
+<strong>参数</strong>: <ul>
+<li><code>lldb-server</code>: 该工具在 <code>path/to/ndk/toolchains/llvm/prebuilt/&lt;host&gt;/lib64/clang/&lt;clang-version&gt;/lib/linux/&lt;abi&gt;</code> 目录中可以找到.</li>
+<li><code>package-id</code>: 待调试的应用包名.</li>
+</ul>
+</li>
+<li>在 vscode 的 <code>launcher.json</code> 新增 debug 配置:<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">   <span class="attr">&quot;version&quot;</span>: <span class="string">&quot;0.2.0&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;configurations&quot;</span>: [</span><br><span class="line">       &#123;</span><br><span class="line">           <span class="attr">&quot;name&quot;</span>: <span class="string">&quot;flutter_lldb&quot;</span>,</span><br><span class="line">           <span class="attr">&quot;type&quot;</span>: <span class="string">&quot;lldb&quot;</span>,</span><br><span class="line">           <span class="attr">&quot;request&quot;</span>: <span class="string">&quot;attach&quot;</span>,</span><br><span class="line">           <span class="attr">&quot;pid&quot;</span>: &lt;package-pid&gt;,</span><br><span class="line">           <span class="attr">&quot;initCommands&quot;</span>: [</span><br><span class="line">               <span class="string">&quot;platform select remote-android&quot;</span>,</span><br><span class="line">               <span class="string">&quot;platform connect unix-abstract-connect:///data/data/&lt;package-id&gt;/debug.socket&quot;</span></span><br><span class="line">           ],</span><br><span class="line">           <span class="attr">&quot;postRunCommands&quot;</span>: [</span><br><span class="line">               <span class="string">&quot;target symbols add path/to/src/out/&lt;local-engine&gt;/libflutter.so&quot;</span></span><br><span class="line">           ]</span><br><span class="line">       &#125;</span><br><span class="line">   ]</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<strong>参数</strong>:<ul>
+<li><code>package-pid</code>: 待调试应用的进程号, 可以通过 <code>adb shell pidof &lt;package-id&gt;</code> 获取.</li>
+<li><code>package-id</code>: 待调试的应用包名.</li>
+<li><code>local-engine</code>: 同 <code>flutter build</code> 中的参数.</li>
+</ul>
+</li>
+<li>在 vscode 选择 <code>flutter_lldb</code> 配置并运行.</li>
+</ol>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment#using-vscode-as-an-ide-for-the-android-embedding">Setting up the Engine development environment</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/flutter/flutter/wiki/Compiling-the-engine">Compiling the engine</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/flutter/flutter/wiki/Flutter%27s-modes">Flutter’s modes</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/flutter/flutter/wiki/The-flutter-tool#using-a-locally-built-engine-with-the-flutter-tool">Using a locally-built engine with the <code>flutter</code> tool</a></li>
+<li><a target="_blank" rel="noopener" href="https://lldb.llvm.org/use/remote.html">Remote Debugging</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>陈仁杰
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://blog.chrnie.com/2023/05/13/Flutter-Engine:-%E7%BC%96%E8%AF%91%E4%B8%8E%E8%B0%83%E8%AF%95-(Android)/" title="Flutter Engine: 编译与调试 (Android)">https://blog.chrnie.com/2023/05/13/Flutter-Engine:-编译与调试-(Android)/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Android/" rel="tag"># Android</a>
+              <a href="/tags/flutter/" rel="tag"># flutter</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/06/05/%E9%9D%9E%E9%98%BB%E5%A1%9E%E7%9A%84%E6%9D%A1%E4%BB%B6%E7%AD%89%E5%BE%85/" rel="prev" title="非阻塞的条件等待">
+      <i class="fa fa-chevron-left"></i> 非阻塞的条件等待
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/06/03/AGP8.0%20%E6%97%B6%E4%BB%A3%E7%9A%84%20Transform%20%E5%AE%9E%E8%B7%B5/" rel="next" title="AGP8.0 时代的 Transform 实践">
+      AGP8.0 时代的 Transform 实践 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E5%B7%A5%E5%85%B7"><span class="nav-number">1.</span> <span class="nav-text">准备工具</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BD%E6%BA%90%E7%A0%81"><span class="nav-number">2.</span> <span class="nav-text">下载源码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E4%BB%A3%E7%A0%81"><span class="nav-number">2.1.</span> <span class="nav-text">同步代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%87%E6%8D%A2%E5%88%86%E6%94%AF"><span class="nav-number">2.2.</span> <span class="nav-text">切换分支</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E6%BA%90%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text">编译源码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E6%9E%84%E5%BB%BA%E6%96%87%E4%BB%B6"><span class="nav-number">3.1.</span> <span class="nav-text">生成构建文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E6%9E%84%E5%BB%BA%E6%93%8D%E4%BD%9C"><span class="nav-number">3.2.</span> <span class="nav-text">执行构建操作</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E6%BA%90%E7%A0%81"><span class="nav-number">4.</span> <span class="nav-text">调试源码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E8%B7%B3%E8%BD%AC%E8%A1%A5%E5%85%A8"><span class="nav-number">4.1.</span> <span class="nav-text">代码跳转补全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#c"><span class="nav-number">4.1.1.</span> <span class="nav-text">c++</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java"><span class="nav-number">4.1.2.</span> <span class="nav-text">Java</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E6%9C%AC%E5%9C%B0%E5%BC%95%E6%93%8E"><span class="nav-number">4.2.</span> <span class="nav-text">使用本地引擎</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%AD%E7%82%B9%E8%B0%83%E8%AF%95%E4%BB%A3%E7%A0%81"><span class="nav-number">4.3.</span> <span class="nav-text">断点调试代码</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">5.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="陈仁杰"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">陈仁杰</p>
+  <div class="site-description" itemprop="description">Android Developer</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2016 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">陈仁杰</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'b9b101e57cbe4d28880b',
+      clientSecret: 'e22ee5c754093833a25dfb504570589d9ea44e70',
+      repo        : 'blog-comment',
+      owner       : 'renjie-c',
+      admin       : ['renjie-c'],
+      id          : 'b01a33b1493c48c6ff975ea569ddce09',
+        language: 'zh-CN',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>
