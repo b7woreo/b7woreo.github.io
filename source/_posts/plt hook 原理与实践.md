@@ -60,41 +60,13 @@ PLT Hook 主要涉及的是共享目标文件, 下面将介绍动态链接库加
 
 于是动态链接库中 `.data` 和 `.text` 的内存数据可以在多个进程中共享, 每个进程又会有自己的独享的 `.got` 内存数据. 当动态链接库调用外部函数时流程:
 
-```mermaid
-graph LR
-
-caller_text(.text)
-caller_got(.got)
-callee_text(.text)
-
-subgraph caller.so
-caller_text --> caller_got
-end
-subgraph callee.so
-caller_got --> callee_text
-end
-```
+![](/images/20230709234507.png)
 
 ### 延迟绑定(PLT)
 
 PIC 有一个缺点, 就是在动态链接库被加载时需要完成对所有符号的处理工作, 这会影响程序的启动速度. 于是在 PIC 的基础上衍生出了 PLT 技术. 当动态链接库调用外部函数时流程:
 
-```mermaid
-graph LR
-
-caller_text(.text)
-caller_plt(.plt)
-caller_gotplt(.got.plt)
-callee_text(.text)
-
-subgraph caller.so
-caller_text --> caller_plt
-caller_plt --> caller_gotplt
-end
-subgraph callee.so
-caller_gotplt --> callee_text
-end
-```
+![](/images/20230709234522.png)
 
 相较于 PIC, PLT 多出了 `.plt` 这个中间跳转表, `.plt` 中的大致逻辑:
 
