@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
 
@@ -28,7 +28,7 @@
 <meta property="og:image" content="https://blog.chrnie.com/images/20180308231147.png">
 <meta property="og:image" content="https://blog.chrnie.com/images/20180308235926.png">
 <meta property="article:published_time" content="2018-03-08T00:00:00.000Z">
-<meta property="article:modified_time" content="2023-06-08T15:45:34.842Z">
+<meta property="article:modified_time" content="2023-07-09T15:10:05.701Z">
 <meta property="article:author" content="陈仁杰">
 <meta property="article:tag" content="CI">
 <meta name="twitter:card" content="summary">
@@ -192,7 +192,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-08 15:45:34" itemprop="dateModified" datetime="2023-06-08T15:45:34Z">2023-06-08</time>
+                <time title="修改时间：2023-07-09 15:10:05" itemprop="dateModified" datetime="2023-07-09T15:10:05Z">2023-07-09</time>
               </span>
 
           
@@ -221,7 +221,7 @@
 <p>而他们的值通过一下步骤获取：<br>先到 <a href="firebase.google.com">Firebase</a> 申请一个工程，环境变量 FIREBASE_PROJECT 的值便是 <strong>项目 ID</strong>。<br>接下来需要在能科学上网的地方安装 Firebase CLI：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install -g firebase-tools</span><br></pre></td></tr></table></figure>
 <p>通过 <code>firebase login:ci</code> 命令登陆，成功登陆后便可获得环境变量 FIREBASE_TOKEN 的值。如果不是在本机登陆（例如通过 SSH 在远程服务器上进行操作的），可以通过<code>firebase login:ci --no-localhost</code> 命令完成登陆。填写了环境变量值之后，还需要在源码根目录下添加 <strong>firebase.json</strong> 文件配置基本的发布信息。示例：</p>
-<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;hosting&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;public&quot;</span>: <span class="string">&quot;public&quot;</span>,</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;hosting&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;public&quot;</span><span class="punctuation">:</span> <span class="string">&quot;public&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
 <p><strong>hosting</strong> 代表我们使用的是 Hosting 服务，子节点 <strong>public</strong> 指定了需要托管的静态资源的目录，因为 Hexo 生成的文件默认在 public 文件夹中，故指定为该文件夹。<br>现在万事俱备了，只需要我们轻轻敲动键盘，把源码推送到 Github 上便大功告成了。待 CI 任务执行完成，便可以在 Firebase Hosting 指定的域名上访问我们的博客了。 </p>
 
     </div>
@@ -339,7 +339,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-count">29</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

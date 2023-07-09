@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
 
@@ -26,7 +26,7 @@
 <meta property="og:description" content="最近想尝试把 Android 的开发环境转移到 Linux 上, 因为不想继续在 Windows 使用 babun (经过订制的开箱即用的 cygwin) 凑合了. 我本着不折腾的原则, 来来去去安装了几个发行版本:0. Ubuntu, 一直以简易好手上著称, 但是在我安装了最小版本之后发现双击 .deb 文件居然不能正常安装软件了, 安装搜狗输入法的时候也不正常. 遂放弃.0. Deepin,">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2016-06-23T00:00:00.000Z">
-<meta property="article:modified_time" content="2023-06-08T15:45:34.842Z">
+<meta property="article:modified_time" content="2023-07-09T15:10:05.701Z">
 <meta property="article:author" content="陈仁杰">
 <meta property="article:tag" content="Linux">
 <meta name="twitter:card" content="summary">
@@ -189,7 +189,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-08 15:45:34" itemprop="dateModified" datetime="2023-06-08T15:45:34Z">2023-06-08</time>
+                <time title="修改时间：2023-07-09 15:10:05" itemprop="dateModified" datetime="2023-07-09T15:10:05Z">2023-07-09</time>
               </span>
 
           
@@ -206,26 +206,26 @@
         <p>最近想尝试把 Android 的开发环境转移到 Linux 上, 因为不想继续在 Windows 使用 <em>babun</em> (经过订制的开箱即用的 cygwin) 凑合了. 我本着不折腾的原则, 来来去去安装了几个发行版本:<br>0. Ubuntu, 一直以简易好手上著称, 但是在我安装了最小版本之后发现双击 .deb 文件居然不能正常安装软件了, 安装搜狗输入法的时候也不正常. 遂放弃.<br>0. Deepin, 好评度不错的国内发行版本, 中文化很好, 特别是合作推出了很多国内软件的 Linux 版本, 想来对我这种小白应该很合适, 毕竟不想折腾只想安安静静写代码.<br> 但是安装之后发现桌面流畅程度真的是不敢恭维, 实在觉得卡了. 遂放弃.</p>
 <p>最后看上了 ArchLinux, 但是安装过程比较繁琐, 我又不想折腾, 于是选择了基于 Arch 发行的 Manjaro.</p>
 <p>Manjaro 安装很简单, 和 Ubuntu 等其他的桌面发行版本一样, 一路点点点就装好了. 不过装好之后还需要进行一些简单的配置.</p>
-<h1 id="更换源与添加源"><a href="#更换源与添加源" class="headerlink" title="更换源与添加源"></a>更换源与添加源</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">#nano &#x2F;etc&#x2F;pacman.d&#x2F;mirrors&#x2F;China</span><br><span class="line">[China]</span><br><span class="line">Server &#x3D; http:&#x2F;&#x2F;mirrors.ustc.edu.cn&#x2F;manjaro&#x2F;$branch&#x2F;$repo&#x2F;$arch</span><br><span class="line"></span><br><span class="line">#nano &#x2F;etc&#x2F;pacman-mirrors.conf</span><br><span class="line">OnlyCountry&#x3D;China</span><br><span class="line"></span><br><span class="line">pacman-mirrors -g</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># &#x2F;etc&#x2F;pacman.conf </span><br><span class="line">[archlinuxcn]</span><br><span class="line">SigLevel &#x3D; Optional TrustedOnly</span><br><span class="line">Server &#x3D; https:&#x2F;&#x2F;mirrors.ustc.edu.cn&#x2F;archlinuxcn&#x2F;$arch</span><br><span class="line"></span><br><span class="line">sudo pacman -Syy &amp;&amp; sudo pacman -S archlinuxcn-keyring</span><br></pre></td></tr></table></figure>
+<h1 id="更换源与添加源"><a href="#更换源与添加源" class="headerlink" title="更换源与添加源"></a>更换源与添加源</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">#nano /etc/pacman.d/mirrors/China</span><br><span class="line">[China]</span><br><span class="line">Server = http://mirrors.ustc.edu.cn/manjaro/$branch/$repo/$arch</span><br><span class="line"></span><br><span class="line">#nano /etc/pacman-mirrors.conf</span><br><span class="line">OnlyCountry=China</span><br><span class="line"></span><br><span class="line">pacman-mirrors -g</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># /etc/pacman.conf </span><br><span class="line">[archlinuxcn]</span><br><span class="line">SigLevel = Optional TrustedOnly</span><br><span class="line">Server = https://mirrors.ustc.edu.cn/archlinuxcn/$arch</span><br><span class="line"></span><br><span class="line">sudo pacman -Syy &amp;&amp; sudo pacman -S archlinuxcn-keyring</span><br></pre></td></tr></table></figure>
 <p>不过在我添加了 archlinuxcn 的源之后安装 archlinuxcn-keyring 失败. Google之后得了解决办法:</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">pacman -Syu haveged</span><br><span class="line">systemctl start haveged</span><br><span class="line">systemctl enable haveged</span><br><span class="line">rm -rf &#x2F;etc&#x2F;pacman.d&#x2F;gnupg</span><br><span class="line">pacman-key --init</span><br><span class="line">pacman-key --populate manjaro</span><br><span class="line">pacman-key --populate archlinuxcn</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">pacman -Syu haveged</span><br><span class="line">systemctl start haveged</span><br><span class="line">systemctl enable haveged</span><br><span class="line">rm -rf /etc/pacman.d/gnupg</span><br><span class="line">pacman-key --init</span><br><span class="line">pacman-key --populate manjaro</span><br><span class="line">pacman-key --populate archlinuxcn</span><br></pre></td></tr></table></figure>
 
 <p>好了, 现在源配置好了, 安装 Chrome 和 Android-studio 都是一个命令的事了, 很爽!</p>
 <h1 id="安装-zsh"><a href="#安装-zsh" class="headerlink" title="安装 zsh"></a>安装 zsh</h1><p>既然是用 Linux 当然没有忘记把 bash 换成 zsh<br>首先是安装 zsh:  </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo pacman -S zsh </span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo pacman -S zsh </span><br></pre></td></tr></table></figure>
 
 <p>接着配置 oh-my-zsh: </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sh -c &quot;$(curl -fsSL https:&#x2F;&#x2F;raw.github.com&#x2F;robbyrussell&#x2F;oh-my-zsh&#x2F;master&#x2F;tools&#x2F;install.sh)&quot; </span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sh -c &quot;$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)&quot; </span><br></pre></td></tr></table></figure>
 <p>最后更换默认的 shell: </p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chsh -s &#x2F;bin&#x2F;zsh </span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chsh -s /bin/zsh </span><br></pre></td></tr></table></figure>
 <p>重启之后就就可以愉快的使用 zsh 了~</p>
 <h1 id="安装中文输入法"><a href="#安装中文输入法" class="headerlink" title="安装中文输入法"></a>安装中文输入法</h1><p>我选择的是安装搜狗拼音的 Linux 版本</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo pacman -S fcitx-sougoupinyin</span><br><span class="line">sudo pacman -S fcitx-im # 全部安装</span><br><span class="line">sudo pacman -S fcitx-configtool # 图形化配置工具</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo pacman -S fcitx-sougoupinyin</span><br><span class="line">sudo pacman -S fcitx-im # 全部安装</span><br><span class="line">sudo pacman -S fcitx-configtool # 图形化配置工具</span><br></pre></td></tr></table></figure>
 <p>之后就是还需要更改 <strong>~/.xprofile</strong></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">export GTK_IM_MODULE&#x3D;fcitx</span><br><span class="line">export QT_IM_MODULE&#x3D;fcitx</span><br><span class="line">export XMODIFIERS&#x3D;&quot;@im&#x3D;fcitx&quot;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">export GTK_IM_MODULE=fcitx</span><br><span class="line">export QT_IM_MODULE=fcitx</span><br><span class="line">export XMODIFIERS=&quot;@im=fcitx&quot;</span><br></pre></td></tr></table></figure>
 <p>最后在命令行输入 <code>fcitx</code> 就可以使用了</p>
 <h1 id="配置-Android-开发环境"><a href="#配置-Android-开发环境" class="headerlink" title="配置 Android 开发环境"></a>配置 Android 开发环境</h1><p>Android-studio 在 archlinuxcn 源中有现成的包, 安装很简单就没什么好说的了.<br>不过在 Android-studio 安装好后, 当我想启动 AVD 时出现了错误, 不能启动. 好在也是经过 Google 之后解决了:</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd ～&#x2F;Android&#x2F;tools&#x2F;lib64&#x2F;libstdc++</span><br><span class="line">mv libstdc++.so.6 libstdc++.so.6.bak</span><br><span class="line">ln -s &#x2F;usr&#x2F;lib64&#x2F;libstdc++.so.6 ～&#x2F;Android&#x2F;tools&#x2F;lib64&#x2F;libstdc++</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd ～/Android/tools/lib64/libstdc++</span><br><span class="line">mv libstdc++.so.6 libstdc++.so.6.bak</span><br><span class="line">ln -s /usr/lib64/libstdc++.so.6 ～/Android/tools/lib64/libstdc++</span><br></pre></td></tr></table></figure>
 
 <p>经过如上步骤, 一个基础的 Android 开发环境就配置好了. 虽然只有上述 4 个简单的步骤, 但是还是折腾掉了我一个下午的时间, 所以想分享出来节省大家的时间. 经过一个下午的简单体验, 觉得 Manjaro 很适合新手使用, 有简单易用的图形化安装界面, 使得像我这样的小白也能轻易体会到 archlinux 的好处 (系统是滚动升级的, 软件包也都很新), 有 pacman 配合官方源和 archlinuxcn 源, 基本什么软件安装都是一行命令可以解决, 十分的爽快.</p>
 
@@ -341,7 +341,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-count">29</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>

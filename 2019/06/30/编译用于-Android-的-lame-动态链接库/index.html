@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
 
@@ -26,7 +26,7 @@
 <meta property="og:description" content="本文介绍主要如何编译出用于 Android 的 lame 动态链接库，但适用于所有的使用了 autoconf 的项目。   构建过程在介绍具体的操作步骤之前，首先简单了解一下 c 源代码是如何通过编译器变成机器可执行文件的：  预处理：预处理过程主要处理源代码文件中的以“#”开始的预编译指令。该过程生成的文件一般以 .i 作为后缀。  编译：编译过程就是把预处理完的文件进行一系列词法分析、语法分析">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2019-06-30T00:00:00.000Z">
-<meta property="article:modified_time" content="2023-06-08T15:45:34.846Z">
+<meta property="article:modified_time" content="2023-07-09T15:10:05.705Z">
 <meta property="article:author" content="陈仁杰">
 <meta property="article:tag" content="Android">
 <meta name="twitter:card" content="summary">
@@ -189,7 +189,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-08 15:45:34" itemprop="dateModified" datetime="2023-06-08T15:45:34Z">2023-06-08</time>
+                <time title="修改时间：2023-07-09 15:10:05" itemprop="dateModified" datetime="2023-07-09T15:10:05Z">2023-07-09</time>
               </span>
 
           
@@ -216,13 +216,13 @@
 </li>
 </ol>
 <h1 id="工具链"><a href="#工具链" class="headerlink" title="工具链"></a>工具链</h1><p>介绍完了基础的构建过程，对 c 源代码如何变成可执行文件应该有了大概的认识。在构建过程中，每一步都有相应的工具帮助我们完成转换，这些工具的集合被称为工具链。同样的，我们需要编译出用于 Android 系统的上的动态链接库，就需要使用到官方给出的特定的工具链用于完成转换。可以到 <a target="_blank" rel="noopener" href="https://developer.android.com/ndk/downloads">NDK Downloads</a> 中进行下载。需要注意的是，从 r18 版本开始官方移除了 gcc 的支持，可能会对一些项目的编译造成影响，不熟悉的最好使用旧版本的 ndk 完成编译，本文将使用 r16b 版本完成此次编译。<br>完成下载后，通过执行以下命令可以自动生成用于编译指定环境的工具链：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">path/to/ndk/tools/make_standalone_toolchain.py \</span><br><span class="line">    --arch arm64 --api 21 --install-dir ./toolchain</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">path/to/ndk/tools/make_standalone_toolchain.py \</span><br><span class="line">    --<span class="built_in">arch</span> arm64 --api 21 --install-dir ./toolchain</span><br></pre></td></tr></table></figure>
 <p>顺利执行后，将在当前目录下生成了一个新目录 toolchain，里面是用于编译可在 arm64-v8a，minSdk 版本为 21 的机器上运行的完整工具链。</p>
 <h1 id="源码下载"><a href="#源码下载" class="headerlink" title="源码下载"></a>源码下载</h1><p>工具准备好了，接下来就开始准备原材料。到 <a target="_blank" rel="noopener" href="http://lame.sourceforge.net/download.php">lame</a> 官网即可下载到最新的源代码。下载完后解压备用即可。</p>
 <h1 id="配置和编译"><a href="#配置和编译" class="headerlink" title="配置和编译"></a>配置和编译</h1><p>进入 lame 源码目录，执行：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./configure -h</span><br></pre></td></tr></table></figure>
 <p>将会打印出所有配置可选项，根据自身的需要进行配置即可。为了简化多次进行编译的流程，一般会编写 shell 脚本将配置和执行命令打包，例如适用于我的需求的完整编译脚本如下：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line">BASE_PATH=$(<span class="built_in">cd</span> `dirname <span class="variable">$0</span>`; <span class="built_in">pwd</span>)</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> PATH=<span class="variable">$PATH</span>:`<span class="built_in">pwd</span>`/toolchain/bin</span><br><span class="line"></span><br><span class="line">TARGET_HOST=arm-linux-androideabi</span><br><span class="line"><span class="built_in">export</span> CC=<span class="variable">$TARGET_HOST</span>-gcc</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> CFLAGS=<span class="string">&quot;-fPIE -fPIC -Os -D**ANDROID_API**=21&quot;</span></span><br><span class="line"><span class="built_in">export</span> LDFLAGS=<span class="string">&quot;-pie&quot;</span></span><br><span class="line"></span><br><span class="line">./configure \</span><br><span class="line">--host=<span class="variable">$TARGET_HOST</span> \</span><br><span class="line">--enable-static=no \</span><br><span class="line">--disable-frontend \</span><br><span class="line">--prefix=<span class="variable">$BASE_PATH</span>/out/</span><br><span class="line"></span><br><span class="line">make clean</span><br><span class="line">make install</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line">BASE_PATH=$(<span class="built_in">cd</span> `<span class="built_in">dirname</span> <span class="variable">$0</span>`; <span class="built_in">pwd</span>)</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> PATH=<span class="variable">$PATH</span>:`<span class="built_in">pwd</span>`/toolchain/bin</span><br><span class="line"></span><br><span class="line">TARGET_HOST=arm-linux-androideabi</span><br><span class="line"><span class="built_in">export</span> CC=<span class="variable">$TARGET_HOST</span>-gcc</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> CFLAGS=<span class="string">&quot;-fPIE -fPIC -Os -D**ANDROID_API**=21&quot;</span></span><br><span class="line"><span class="built_in">export</span> LDFLAGS=<span class="string">&quot;-pie&quot;</span></span><br><span class="line"></span><br><span class="line">./configure \</span><br><span class="line">--host=<span class="variable">$TARGET_HOST</span> \</span><br><span class="line">--enable-static=no \</span><br><span class="line">--disable-frontend \</span><br><span class="line">--prefix=<span class="variable">$BASE_PATH</span>/out/</span><br><span class="line"></span><br><span class="line">make clean</span><br><span class="line">make install</span><br></pre></td></tr></table></figure>
 <p>该脚本禁止了可执行程序和静态链接库生成，因为这些都是我不需要的。将脚本保存在 lame 根目录，toolchain 也拷贝到 lame 根目录之后，执行脚本即可在 out/lib 目录中看到 libmp3lame.so 共享目标文件以及在 out/inlucde/lame 目录中看到 lame.h 头文件。</p>
 <p>需要注意的是，CFLAGS 一定要加上 <code>D**ANDROID_API**</code> 参数，值与生成工具链时指定的 minSdk 相同，不然可能会出现运行时异常：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java.lang.UnsatisfiedLinkError: dlopen failed: could not load library <span class="string">&quot;libmp3lame.so&quot;</span> needed by <span class="string">&quot;libmp3encoder-lib.so&quot;</span>; caused by cannot locate symbol <span class="string">&quot;stderr&quot;</span> referenced by <span class="string">&quot;libmp3lame.so&quot;</span>...</span><br></pre></td></tr></table></figure>
@@ -345,7 +345,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-count">29</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
