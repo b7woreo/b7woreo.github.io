@@ -18,7 +18,7 @@ tags:
 
 ## ELF 文件
 
-![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/186761cff90448da90a30e5261622444~tplv-k3u1fbpfcp-watermark.image?)
+![](/images/202307231659.png)
 
 ELF 全称: Executable and Linkable Format, 是 Unix 和类 Unix 系统的标准二进制文件格式. 常见的 ELF 文件有:
 
